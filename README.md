@@ -1,8 +1,10 @@
-# microROS in WASM - ROS Nodes Running Inside WASM Runtime
+# ROS in WASM - ROS Nodes Running Inside WASM Runtime
 
 **ROS executing inside WebAssembly runtime - Direct WASM-to-WASM communication**
 
-This project implements microROS (ROS2) nodes that run **entirely inside WASM runtime**. Two WASM environments communicate directly via ROS2 DDS, without external ROS processes.
+This project implements ROS nodes that run **entirely inside WASM runtime** using a minimal DDS layer. Two WASM environments communicate directly via ROS2 DDS protocol, without external ROS processes.
+
+**Note:** This uses a **minimal DDS implementation**, not full microROS. See `MICROROS_STATUS.md` for details on microROS porting.
 
 ## Goal
 
