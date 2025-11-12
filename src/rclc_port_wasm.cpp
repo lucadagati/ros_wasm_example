@@ -9,37 +9,11 @@
 #include <emscripten/bind.h>
 #include <string>
 #include <cstdio>
+#include "rcl_types_wasm.h"
 
 // TODO: Include actual rclc headers when ported
 // #include <rclc/rclc.h>
 // #include <rclc/executor.h>
-
-// Forward declarations from rcl
-typedef struct {
-    void* impl;
-} rcl_node_t;
-
-typedef struct {
-    void* impl;
-} rcl_publisher_t;
-
-typedef struct {
-    void* impl;
-} rcl_subscription_t;
-
-typedef struct {
-    void* impl;
-} rcl_context_t;
-
-typedef struct {
-    rcl_context_t* context;
-    void* allocator;
-} rclc_support_t;
-
-typedef enum {
-    RCL_RET_OK = 0,
-    RCL_RET_ERROR = 1,
-} rcl_ret_t;
 
 // rclc_support_init - Initialize rclc support structure
 extern "C" rcl_ret_t rclc_support_init(
@@ -136,16 +110,5 @@ extern "C" rcl_ret_t rclc_executor_spin_some(
     return RCL_RET_OK;
 }
 
-// Placeholder types
-typedef struct {
-    void* impl;
-} rclc_executor_t;
-
-typedef struct {
-    int dummy;
-} rosidl_message_type_support_t;
-
-typedef enum {
-    RCLC_EXECUTOR_HANDLE_TYPE_SUBSCRIPTION = 0,
-} rclc_executor_handle_type_t;
+// Types are now in rcl_types_wasm.h
 

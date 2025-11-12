@@ -10,39 +10,10 @@
 #include <string>
 #include <cstdio>
 #include <cstdint>
+#include "rcl_types_wasm.h"
 
 // TODO: Include actual rcl headers when ported
-// For now, we define minimal rcl types and functions
-
-// rcl types (simplified for WASM)
-typedef struct {
-    void* impl;
-} rcl_node_t;
-
-typedef struct {
-    void* impl;
-} rcl_publisher_t;
-
-typedef struct {
-    void* impl;
-} rcl_subscription_t;
-
-typedef struct {
-    void* impl;
-} rcl_context_t;
-
-typedef struct {
-    rcl_context_t* context;
-    void* allocator;
-} rcl_init_options_t;
-
-// rcl return codes
-typedef enum {
-    RCL_RET_OK = 0,
-    RCL_RET_ERROR = 1,
-    RCL_RET_BAD_ALLOC = 2,
-    RCL_RET_INVALID_ARGUMENT = 3,
-} rcl_ret_t;
+// #include <rcl/rcl.h>
 
 // Forward declarations
 class RMWCustomWASM;
@@ -135,32 +106,5 @@ extern "C" rcl_ret_t rcl_take(
     return RCL_RET_OK;
 }
 
-// Placeholder types (will be replaced with actual rcl types)
-typedef struct {
-    int dummy;
-} rcl_node_options_t;
-
-typedef struct {
-    int dummy;
-} rcl_publisher_options_t;
-
-typedef struct {
-    int dummy;
-} rcl_subscription_options_t;
-
-typedef struct {
-    int dummy;
-} rosidl_message_type_support_t;
-
-typedef struct {
-    int dummy;
-} rmw_publisher_allocation_t;
-
-typedef struct {
-    int dummy;
-} rmw_message_info_t;
-
-typedef struct {
-    int dummy;
-} rmw_subscription_allocation_t;
+// Types are now in rcl_types_wasm.h
 

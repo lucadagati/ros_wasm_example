@@ -12,6 +12,7 @@
 // #include <std_msgs/msg/string.h>
 
 // For now, use our ported rcl/rclc
+#include "rcl_types_wasm.h"
 #include "rcl_port_wasm.cpp"
 #include "rclc_port_wasm.cpp"
 #include <emscripten.h>
