@@ -119,7 +119,7 @@ EMSCRIPTEN_BINDINGS(rmw_custom_wasm) {
         .function("createParticipant", &RMWCustomWASM::createParticipant, allow_raw_pointers())
         .function("createPublisher", &RMWCustomWASM::createPublisher, allow_raw_pointers())
         .function("createSubscriber", &RMWCustomWASM::createSubscriber, allow_raw_pointers())
-        .function("publish", &RMWCustomWASM::publish, allow_raw_pointers())
-        .function("take", &RMWCustomWASM::take, allow_raw_pointers());
+        .function("publish", &RMWCustomWASM::publish, allow_raw_pointers());
+        // take() is not exposed - used internally by rcl_take() only
 }
 
