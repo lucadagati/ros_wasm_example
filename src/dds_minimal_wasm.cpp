@@ -301,6 +301,7 @@ public:
     bool isInitialized() const { return initialized; }
     std::string getTopicName() const { return topic_name; }
     int getMessagesReceived() const { return messages_received; }
+    DDSParticipantWASM* getParticipant() const { return participant; }
 };
 
 EMSCRIPTEN_BINDINGS(dds_minimal_wasm) {

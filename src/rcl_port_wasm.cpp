@@ -10,13 +10,16 @@
 #include <string>
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include "rcl_types_wasm.h"
+#include "rmw_custom_wasm.cpp"
 
 // TODO: Include actual rcl headers when ported
 // #include <rcl/rcl.h>
+class DDSParticipantWASM;
 
-// Forward declarations
-class RMWCustomWASM;
+// Global RMW instance (in real implementation, would be per-context)
+static RMWCustomWASM* g_rmw_instance = nullptr;
 
 // rcl_init - Initialize ROS Client Library
 extern "C" rcl_ret_t rcl_init(
@@ -26,10 +29,21 @@ extern "C" rcl_ret_t rcl_init(
     rcl_context_t* context)
 {
     printf("WASM: rcl_init called\n");
-    // TODO: Initialize rcl in WASM
-    // - Setup memory allocator
-    // - Initialize context
-    // - Setup networking
+    
+    // Initialize our RMW (which uses our DDS layer)
+    if (!g_rmw_instance) {
+        g_rmw_instance = new RMWCustomWASM();
+        if (!g_rmw_instance->init()) {
+            printf("WASM: Failed to initialize RMW\n");
+            return RCL_RET_ERROR;
+        }
+    }
+    
+    // Initialize context (store RMW instance)
+    if (context) {
+        context->impl = g_rmw_instance;
+    }
+    
     return RCL_RET_OK;
 }
 
@@ -42,9 +56,27 @@ extern "C" rcl_ret_t rcl_node_init(
     const rcl_node_options_t* options)
 {
     printf("WASM: rcl_node_init called: %s\n", name);
-    // TODO: Initialize node in WASM
-    // - Create DDS participant
-    // - Store node info
+    
+    if (!node || !context || !g_rmw_instance) {
+        return RCL_RET_INVALID_ARGUMENT;
+    }
+    
+    // Create DDS participant via RMW
+    std::string node_name = name;
+    if (namespace_ && strlen(namespace_) > 0) {
+        node_name = std::string(namespace_) + "/" + name;
+    }
+    
+    void* participant = g_rmw_instance->createParticipant(node_name, 0);
+    if (!participant) {
+        printf("WASM: Failed to create DDS participant\n");
+        return RCL_RET_ERROR;
+    }
+    
+    // Store participant in node
+    node->impl = participant;
+    
+    printf("WASM: ROS node initialized: %s\n", node_name.c_str());
     return RCL_RET_OK;
 }
 
@@ -57,9 +89,22 @@ extern "C" rcl_ret_t rcl_publisher_init(
     const rcl_publisher_options_t* options)
 {
     printf("WASM: rcl_publisher_init called: %s\n", topic_name);
-    // TODO: Initialize publisher in WASM
-    // - Use our RMW to create publisher
-    // - Register with DDS
+    
+    if (!publisher || !node || !node->impl || !g_rmw_instance) {
+        return RCL_RET_INVALID_ARGUMENT;
+    }
+    
+    // Create publisher via RMW
+    void* pub_handle = g_rmw_instance->createPublisher(node->impl, topic_name, "std_msgs::msg::String");
+    if (!pub_handle) {
+        printf("WASM: Failed to create publisher\n");
+        return RCL_RET_ERROR;
+    }
+    
+    // Store publisher handle
+    publisher->impl = pub_handle;
+    
+    printf("WASM: Publisher initialized on topic: %s\n", topic_name);
     return RCL_RET_OK;
 }
 
@@ -69,11 +114,21 @@ extern "C" rcl_ret_t rcl_publish(
     const void* ros_message,
     rmw_publisher_allocation_t* allocation)
 {
-    printf("WASM: rcl_publish called\n");
-    // TODO: Publish message via our RMW
-    // - Serialize message
-    // - Send via DDS
-    return RCL_RET_OK;
+    if (!publisher || !publisher->impl || !g_rmw_instance) {
+        return RCL_RET_INVALID_ARGUMENT;
+    }
+    
+    // TODO: Extract message data from ros_message
+    // For now, assume ros_message is a string pointer
+    const char* data = static_cast<const char*>(ros_message);
+    std::string message_data = data ? std::string(data) : "";
+    
+    // Publish via our RMW (which uses our DDS)
+    if (g_rmw_instance->publish(publisher->impl, message_data)) {
+        return RCL_RET_OK;
+    }
+    
+    return RCL_RET_ERROR;
 }
 
 // rcl_subscription_init - Initialize subscriber
@@ -85,9 +140,22 @@ extern "C" rcl_ret_t rcl_subscription_init(
     const rcl_subscription_options_t* options)
 {
     printf("WASM: rcl_subscription_init called: %s\n", topic_name);
-    // TODO: Initialize subscriber in WASM
-    // - Use our RMW to create subscriber
-    // - Register with DDS
+    
+    if (!subscription || !node || !node->impl || !g_rmw_instance) {
+        return RCL_RET_INVALID_ARGUMENT;
+    }
+    
+    // Create subscriber via RMW
+    void* sub_handle = g_rmw_instance->createSubscriber(node->impl, topic_name, "std_msgs::msg::String");
+    if (!sub_handle) {
+        printf("WASM: Failed to create subscriber\n");
+        return RCL_RET_ERROR;
+    }
+    
+    // Store subscriber handle
+    subscription->impl = sub_handle;
+    
+    printf("WASM: Subscriber initialized on topic: %s\n", topic_name);
     return RCL_RET_OK;
 }
 
@@ -98,12 +166,25 @@ extern "C" rcl_ret_t rcl_take(
     rmw_message_info_t* message_info,
     rmw_subscription_allocation_t* allocation)
 {
-    printf("WASM: rcl_take called\n");
-    // TODO: Receive message via our RMW
-    // - Check for incoming messages
-    // - Deserialize
-    // - Copy to ros_message
-    return RCL_RET_OK;
+    if (!subscription || !subscription->impl || !g_rmw_instance) {
+        return RCL_RET_INVALID_ARGUMENT;
+    }
+    
+    // Take message via our RMW
+    std::string data;
+    if (g_rmw_instance->take(subscription->impl, data)) {
+        // TODO: Copy to ros_message (std_msgs__msg__String)
+        // For now, assume ros_message is a char* buffer
+        if (ros_message) {
+            char* msg_buffer = static_cast<char*>(ros_message);
+            strncpy(msg_buffer, data.c_str(), 1024); // Assume buffer size
+            msg_buffer[1023] = '\0';
+        }
+        return RCL_RET_OK;
+    }
+    
+    // No message available
+    return RCL_RET_TIMEOUT;
 }
 
 // Types are now in rcl_types_wasm.h

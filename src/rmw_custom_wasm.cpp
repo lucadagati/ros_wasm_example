@@ -95,8 +95,19 @@ public:
         if (it == subscribers.end()) {
             return false;
         }
-        // In real implementation, would check for incoming messages
+        
+        // Poll for incoming messages
+        DDSSubscriberWASM* subscriber = it->second;
+        if (subscriber && subscriber->getParticipant()) {
+            NetworkManagerWASM* net_mgr = subscriber->getParticipant()->getNetworkManager();
+            if (net_mgr) {
+                net_mgr->poll();
+            }
+        }
+        
+        // TODO: Check for queued messages
         // For now, return false (no message available)
+        // In real implementation, would check message queue
         return false;
     }
 };
