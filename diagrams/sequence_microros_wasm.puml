@@ -1,0 +1,199 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+skinparam ParticipantPadding 20
+
+title microROS in WASM - Communication Sequence\nPublisher and Subscriber in Separate WASM Runtimes
+
+participant "Browser Tab 1\nPublisher WASM" as PUB_BROWSER #667eea
+participant "microROS Publisher\n(rcl/rclc API\nin WASM)" as PUB_WASM #4CAF50
+note right of PUB_WASM
+  **Inside WASM Runtime 1:**
+  • microROS API (rcl/rclc)
+  • Custom RMW
+  • DDS Publisher
+  • Network Manager
+end note
+
+participant "Browser Tab 2\nSubscriber WASM" as SUB_BROWSER #f5576c
+participant "microROS Subscriber\n(rcl/rclc API\nin WASM)" as SUB_WASM #4CAF50
+note right of SUB_WASM
+  **Inside WASM Runtime 2:**
+  • microROS API (rcl/rclc)
+  • Custom RMW
+  • DDS Subscriber
+  • Network Manager
+end note
+
+participant "DDS Network\n(WebSocket Bridge)" as DDS_NET #FFC107
+participant "ROS2 Topic\n/sensor/temperature" as ROS_TOPIC #9C27B0
+
+== Initialization Phase ==
+
+PUB_BROWSER -> PUB_WASM: Load microros_publisher.wasm
+activate PUB_WASM
+PUB_WASM -> PUB_WASM: Initialize WASM module
+PUB_WASM --> PUB_BROWSER: Module loaded
+deactivate PUB_WASM
+
+SUB_BROWSER -> SUB_WASM: Load microros_subscriber.wasm
+activate SUB_WASM
+SUB_WASM -> SUB_WASM: Initialize WASM module
+SUB_WASM --> SUB_BROWSER: Module loaded
+deactivate SUB_WASM
+
+== microROS Publisher Initialization ==
+
+PUB_BROWSER -> PUB_WASM: init() - Create MicroROSPublisherNodeWASM
+activate PUB_WASM
+
+PUB_WASM -> PUB_WASM: rclc_support_init()
+activate PUB_WASM
+PUB_WASM -> PUB_WASM: rcl_init() → Initialize RMW
+PUB_WASM -> PUB_WASM: RMWCustomWASM::init()
+PUB_WASM -> PUB_WASM: NetworkManagerWASM::init()
+PUB_WASM --> PUB_WASM: RMW initialized
+deactivate PUB_WASM
+
+PUB_WASM -> PUB_WASM: rclc_node_init_default()
+activate PUB_WASM
+PUB_WASM -> PUB_WASM: rcl_node_init() → RMW
+PUB_WASM -> PUB_WASM: RMW::createParticipant()
+PUB_WASM -> PUB_WASM: DDSParticipantWASM::init()
+PUB_WASM -> PUB_WASM: NetworkManagerWASM::startDiscovery()
+PUB_WASM -> DDS_NET: UDP Discovery (port 7400)
+activate DDS_NET
+DDS_NET --> PUB_WASM: Discovery response
+deactivate DDS_NET
+PUB_WASM --> PUB_WASM: Participant created
+deactivate PUB_WASM
+
+PUB_WASM -> PUB_WASM: rclc_publisher_init_default()
+activate PUB_WASM
+PUB_WASM -> PUB_WASM: rcl_publisher_init() → RMW
+PUB_WASM -> PUB_WASM: RMW::createPublisher()
+PUB_WASM -> PUB_WASM: DDSPublisherWASM::init()
+PUB_WASM --> PUB_WASM: Publisher created
+deactivate PUB_WASM
+
+PUB_WASM --> PUB_BROWSER: Node initialized
+deactivate PUB_WASM
+
+== microROS Subscriber Initialization ==
+
+SUB_BROWSER -> SUB_WASM: init() - Create MicroROSSubscriberNodeWASM
+activate SUB_WASM
+
+SUB_WASM -> SUB_WASM: rclc_support_init()
+activate SUB_WASM
+SUB_WASM -> SUB_WASM: rcl_init() → Initialize RMW
+SUB_WASM -> SUB_WASM: RMWCustomWASM::init()
+SUB_WASM -> SUB_WASM: NetworkManagerWASM::init()
+SUB_WASM --> SUB_WASM: RMW initialized
+deactivate SUB_WASM
+
+SUB_WASM -> SUB_WASM: rclc_node_init_default()
+activate SUB_WASM
+SUB_WASM -> SUB_WASM: rcl_node_init() → RMW
+SUB_WASM -> SUB_WASM: RMW::createParticipant()
+SUB_WASM -> SUB_WASM: DDSParticipantWASM::init()
+SUB_WASM -> SUB_WASM: NetworkManagerWASM::startDiscovery()
+SUB_WASM -> DDS_NET: UDP Discovery (port 7400)
+activate DDS_NET
+DDS_NET --> SUB_WASM: Discovery response
+DDS_NET -> PUB_WASM: Notify subscriber discovered
+activate PUB_WASM
+PUB_WASM -> PUB_WASM: Add subscriber endpoint
+deactivate PUB_WASM
+deactivate DDS_NET
+SUB_WASM --> SUB_WASM: Participant created
+deactivate SUB_WASM
+
+SUB_WASM -> SUB_WASM: rclc_subscription_init_default()
+activate SUB_WASM
+SUB_WASM -> SUB_WASM: rcl_subscription_init() → RMW
+SUB_WASM -> SUB_WASM: RMW::createSubscriber()
+SUB_WASM -> SUB_WASM: DDSSubscriberWASM::init()
+SUB_WASM --> SUB_WASM: Subscriber created
+deactivate SUB_WASM
+
+SUB_WASM -> SUB_WASM: rclc_executor_init()
+activate SUB_WASM
+SUB_WASM -> SUB_WASM: rclc_executor_add_subscription()
+SUB_WASM --> SUB_WASM: Executor ready
+deactivate SUB_WASM
+
+SUB_WASM --> SUB_BROWSER: Node initialized
+deactivate SUB_WASM
+
+== Message Publishing Loop ==
+
+loop Every second
+    PUB_BROWSER -> PUB_WASM: publishMessage()
+    activate PUB_WASM
+    
+    PUB_WASM -> PUB_WASM: generateSensorData()
+    PUB_WASM -> PUB_WASM: rcl_publish()
+    activate PUB_WASM
+    PUB_WASM -> PUB_WASM: RMWCustomWASM::publish()
+    PUB_WASM -> PUB_WASM: DDSPublisherWASM::publish()
+    PUB_WASM -> PUB_WASM: Serialize DDS message
+    PUB_WASM -> PUB_WASM: NetworkManagerWASM::sendTCPMessage()
+    PUB_WASM -> DDS_NET: TCP Message (serialized DDS)
+    activate DDS_NET
+    DDS_NET -> ROS_TOPIC: Forward to topic
+    activate ROS_TOPIC
+    ROS_TOPIC -> ROS_TOPIC: Message queued
+    ROS_TOPIC --> DDS_NET: Message stored
+    deactivate ROS_TOPIC
+    DDS_NET -> SUB_WASM: Forward to subscriber
+    activate SUB_WASM
+    SUB_WASM -> SUB_WASM: NetworkManagerWASM::poll()
+    SUB_WASM -> SUB_WASM: Receive TCP message
+    SUB_WASM -> SUB_WASM: Deserialize DDS message
+    SUB_WASM -> SUB_WASM: Queue message
+    deactivate SUB_WASM
+    deactivate DDS_NET
+    PUB_WASM --> PUB_WASM: Message sent
+    deactivate PUB_WASM
+    
+    PUB_WASM --> PUB_BROWSER: Published successfully
+    deactivate PUB_WASM
+    
+    SUB_BROWSER -> SUB_WASM: spinOnce()
+    activate SUB_WASM
+    SUB_WASM -> SUB_WASM: rclc_executor_spin_some()
+    activate SUB_WASM
+    SUB_WASM -> SUB_WASM: Check for messages
+    SUB_WASM -> SUB_WASM: rcl_take()
+    SUB_WASM -> SUB_WASM: RMWCustomWASM::take()
+    SUB_WASM -> SUB_WASM: DDSSubscriberWASM::getMessage()
+    SUB_WASM -> SUB_WASM: Process message
+    SUB_WASM -> SUB_WASM: Call callback
+    SUB_WASM --> SUB_WASM: Message processed
+    deactivate SUB_WASM
+    SUB_WASM --> SUB_BROWSER: Message received
+    deactivate SUB_WASM
+end
+
+note over PUB_WASM, SUB_WASM
+  **Communication Flow:**
+  
+  microROS API (rcl/rclc)
+    ↓
+  Custom RMW
+    ↓
+  Minimal DDS
+    ↓
+  WASI Networking
+    ↓
+  WebSocket Bridge (browser)
+    ↓
+  Network
+end note
+
+@enduml
+
