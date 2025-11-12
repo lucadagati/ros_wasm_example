@@ -16,19 +16,33 @@ echo ""
 if [ -f "/tmp/rosbridge.pid" ]; then
     ROS_PID=$(cat /tmp/rosbridge.pid)
     if ps -p $ROS_PID > /dev/null 2>&1; then
+        # Kill main process and all children
+        pkill -P $ROS_PID 2>/dev/null
         kill $ROS_PID 2>/dev/null
+        sleep 1
+        # Force kill if still running
+        if ps -p $ROS_PID > /dev/null 2>&1; then
+            kill -9 $ROS_PID 2>/dev/null
+        fi
         echo -e "${GREEN}✓${NC} ROS Bridge stopped (PID: $ROS_PID)"
     else
         echo -e "${YELLOW}⚠${NC} ROS Bridge process not found"
     fi
     rm -f /tmp/rosbridge.pid
-else
-    # Try to find and kill by port
-    ROS_PID=$(lsof -ti:9090 2>/dev/null)
-    if [ -n "$ROS_PID" ]; then
-        kill $ROS_PID 2>/dev/null
-        echo -e "${GREEN}✓${NC} ROS Bridge stopped (found by port)"
-    fi
+fi
+
+# Kill any remaining ROS Bridge processes by port
+ROS_PIDS=$(lsof -ti:9090 2>/dev/null)
+if [ -n "$ROS_PIDS" ]; then
+    for pid in $ROS_PIDS; do
+        pkill -P $pid 2>/dev/null
+        kill $pid 2>/dev/null
+        sleep 0.5
+        if ps -p $pid > /dev/null 2>&1; then
+            kill -9 $pid 2>/dev/null
+        fi
+    done
+    echo -e "${GREEN}✓${NC} ROS Bridge stopped (found by port)"
 fi
 
 # Stop Web Server
