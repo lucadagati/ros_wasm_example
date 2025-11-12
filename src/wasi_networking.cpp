@@ -15,6 +15,14 @@
 #include <map>
 #include <functional>
 
+#ifndef __EMSCRIPTEN__
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 using namespace emscripten;
 
 // Network endpoint
@@ -47,11 +55,24 @@ public:
     }
     
     bool create() {
-        // In Emscripten, we use WebSocket or fetch API for networking
-        // For now, we'll use a simulated approach
-        // TODO: Implement real UDP socket using WASI sockets or Emscripten networking
+        // Create UDP socket using Emscripten
+        // Note: Emscripten doesn't have direct UDP support in browser
+        // We'll use a WebSocket-based approach or WASI sockets for standalone
         printf("WASM: Creating UDP socket for DDS discovery\n");
-        socket_fd = 1; // Placeholder
+        
+        #ifdef __EMSCRIPTEN__
+        // For browser: Use WebSocket or fetch API
+        // For standalone: Use WASI sockets
+        socket_fd = 1; // Placeholder - will be replaced with real socket
+        #else
+        // Native socket creation (for testing)
+        socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (socket_fd < 0) {
+            printf("WASM: Failed to create UDP socket\n");
+            return false;
+        }
+        #endif
+        
         return true;
     }
     
@@ -61,8 +82,32 @@ public:
         }
         
         local_endpoint = NetworkEndpoint(address, port);
+        
+        #ifdef __EMSCRIPTEN__
+        // In browser, we can't bind UDP sockets directly
+        // Use WebSocket server or proxy
+        bound = true;
+        printf("WASM: UDP socket bound to %s (Emscripten mode)\n", local_endpoint.toString().c_str());
+        #else
+        // Native socket binding
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        if (address == "0.0.0.0" || address.empty()) {
+            addr.sin_addr.s_addr = INADDR_ANY;
+        } else {
+            inet_pton(AF_INET, address.c_str(), &addr.sin_addr);
+        }
+        
+        if (::bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            printf("WASM: Failed to bind UDP socket\n");
+            return false;
+        }
         bound = true;
         printf("WASM: UDP socket bound to %s\n", local_endpoint.toString().c_str());
+        #endif
+        
         return true;
     }
     
@@ -74,11 +119,28 @@ public:
         
         printf("WASM: UDP send to %s: %s\n", endpoint.toString().c_str(), data.c_str());
         
-        // TODO: Real UDP send
-        // In Emscripten, this would use:
-        // - WebSocket for browser
-        // - WASI sockets for Wasmtime/Wasmer
-        // - Emscripten's networking APIs
+        #ifdef __EMSCRIPTEN__
+        // For browser: Use WebSocket or fetch API
+        // For now, use Emscripten's networking if available
+        // In production, would use WebSocket proxy or WASI sockets
+        EM_ASM_({
+            console.log("UDP send (simulated):", UTF8ToString($0), UTF8ToString($1), $2);
+        }, data.c_str(), endpoint.address.c_str(), endpoint.port);
+        #else
+        // Native UDP send
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(endpoint.port);
+        inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
+        
+        ssize_t sent = sendto(socket_fd, data.c_str(), data.length(), 0,
+                              (struct sockaddr*)&addr, sizeof(addr));
+        if (sent < 0) {
+            printf("WASM: Failed to send UDP packet\n");
+            return false;
+        }
+        #endif
         
         return true;
     }
@@ -88,8 +150,35 @@ public:
     }
     
     void poll() {
-        // TODO: Poll for incoming UDP packets
-        // In real implementation, this would check socket for data
+        if (!bound || socket_fd < 0) return;
+        
+        #ifdef __EMSCRIPTEN__
+        // In browser, polling would be done via WebSocket callbacks
+        // For now, simulate polling
+        // In production, use WebSocket onmessage or WASI socket polling
+        #else
+        // Native UDP receive (non-blocking)
+        struct sockaddr_in from_addr;
+        socklen_t from_len = sizeof(from_addr);
+        char buffer[4096];
+        
+        // Set socket to non-blocking
+        int flags = fcntl(socket_fd, F_GETFL, 0);
+        fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
+        
+        ssize_t received = recvfrom(socket_fd, buffer, sizeof(buffer) - 1, 0,
+                                   (struct sockaddr*)&from_addr, &from_len);
+        if (received > 0) {
+            buffer[received] = '\0';
+            char from_ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &from_addr.sin_addr, from_ip, INET_ADDRSTRLEN);
+            NetworkEndpoint from_endpoint(from_ip, ntohs(from_addr.sin_port));
+            
+            if (receive_callback) {
+                receive_callback(std::string(buffer, received), from_endpoint);
+            }
+        }
+        #endif
     }
     
     void close() {
@@ -122,7 +211,19 @@ public:
     
     bool create() {
         printf("WASM: Creating TCP socket for DDS communication\n");
+        
+        #ifdef __EMSCRIPTEN__
+        // For browser: Use WebSocket
+        // For standalone: Use WASI sockets
         socket_fd = 2; // Placeholder
+        #else
+        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (socket_fd < 0) {
+            printf("WASM: Failed to create TCP socket\n");
+            return false;
+        }
+        #endif
+        
         return true;
     }
     
@@ -132,8 +233,28 @@ public:
         }
         
         remote_endpoint = NetworkEndpoint(address, port);
+        
+        #ifdef __EMSCRIPTEN__
+        // In browser, use WebSocket for TCP-like connection
+        // For now, simulate connection
+        connected = true;
+        printf("WASM: TCP socket connected to %s (Emscripten mode)\n", remote_endpoint.toString().c_str());
+        #else
+        // Native TCP connect
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        inet_pton(AF_INET, address.c_str(), &addr.sin_addr);
+        
+        if (::connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            printf("WASM: Failed to connect TCP socket\n");
+            return false;
+        }
         connected = true;
         printf("WASM: TCP socket connected to %s\n", remote_endpoint.toString().c_str());
+        #endif
+        
         return true;
     }
     
@@ -145,9 +266,23 @@ public:
         
         printf("WASM: TCP send to %s: %s\n", remote_endpoint.toString().c_str(), data.c_str());
         
-        // TODO: Real TCP send
-        // Queue for now
-        send_queue.push_back(data);
+        #ifdef __EMSCRIPTEN__
+        // For browser: Use WebSocket send
+        EM_ASM_({
+            console.log("TCP send (simulated):", UTF8ToString($0), UTF8ToString($1), $2);
+        }, data.c_str(), remote_endpoint.address.c_str(), remote_endpoint.port);
+        #else
+        // Native TCP send
+        ssize_t sent = ::send(socket_fd, data.c_str(), data.length(), 0);
+        if (sent < 0) {
+            printf("WASM: Failed to send TCP data\n");
+            return false;
+        }
+        if (sent < (ssize_t)data.length()) {
+            // Partial send - queue remainder
+            send_queue.push_back(data.substr(sent));
+        }
+        #endif
         
         return true;
     }
@@ -157,12 +292,45 @@ public:
     }
     
     void poll() {
-        // TODO: Poll for incoming TCP data
+        if (!connected || socket_fd < 0) return;
+        
+        #ifdef __EMSCRIPTEN__
+        // In browser, polling would be done via WebSocket callbacks
         // Process send queue
         if (!send_queue.empty()) {
-            // In real implementation, send would be async
+            // In production, would send via WebSocket
             send_queue.clear();
         }
+        #else
+        // Native TCP receive (non-blocking)
+        char buffer[4096];
+        
+        // Set socket to non-blocking
+        int flags = fcntl(socket_fd, F_GETFL, 0);
+        fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
+        
+        ssize_t received = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+        if (received > 0) {
+            buffer[received] = '\0';
+            if (receive_callback) {
+                receive_callback(std::string(buffer, received));
+            }
+        } else if (received == 0) {
+            // Connection closed
+            printf("WASM: TCP connection closed\n");
+            close();
+        }
+        
+        // Process send queue (retry partial sends)
+        if (!send_queue.empty()) {
+            std::string remaining = send_queue.front();
+            send_queue.erase(send_queue.begin());
+            ssize_t sent = ::send(socket_fd, remaining.c_str(), remaining.length(), 0);
+            if (sent < (ssize_t)remaining.length() && sent >= 0) {
+                send_queue.insert(send_queue.begin(), remaining.substr(sent));
+            }
+        }
+        #endif
     }
     
     void close() {

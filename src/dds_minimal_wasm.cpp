@@ -285,12 +285,17 @@ public:
     }
     
     void spinOnce() {
-        if (!initialized) return;
+        if (!initialized || !participant) return;
         
-        // TODO: Check for incoming messages
-        // - Poll socket for new messages
-        // - Deserialize and process
-        // - Call callback
+        // Poll network for incoming messages
+        NetworkManagerWASM* net_mgr = participant->getNetworkManager();
+        if (net_mgr) {
+            net_mgr->poll();
+        }
+        
+        // Check for messages from discovered publishers
+        // In real implementation, messages would arrive via TCP socket
+        // and be processed here
     }
     
     bool isInitialized() const { return initialized; }
