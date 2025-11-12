@@ -1,0 +1,43 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 15
+skinparam maxmessagesize 50
+
+title microROS in WASM - Simplified Sequence
+
+actor "Publisher\nWASM" as PUB #4CAF50
+actor "Subscriber\nWASM" as SUB #4CAF50
+participant "DDS Network" as DDS #FFC107
+
+== Initialization ==
+
+PUB -> PUB: rcl_init()
+PUB -> PUB: rcl_node_init()
+PUB -> PUB: rcl_publisher_init()
+note right: microROS API\nin WASM
+
+SUB -> SUB: rcl_init()
+SUB -> SUB: rcl_node_init()
+SUB -> SUB: rcl_subscription_init()
+note right: microROS API\nin WASM
+
+== Discovery ==
+
+PUB -> DDS: UDP Discovery
+DDS -> SUB: Notify publisher
+SUB -> DDS: Subscribe to topic
+
+== Message Flow ==
+
+loop Every second
+    PUB -> PUB: rcl_publish()
+    PUB -> DDS: Send message
+    DDS -> SUB: Forward message
+    SUB -> SUB: rcl_take()
+    note right: Process message
+end
+
+@enduml
+

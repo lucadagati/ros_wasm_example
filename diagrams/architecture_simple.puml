@@ -1,0 +1,62 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 10
+skinparam shadowing false
+
+title microROS in WASM - Simplified Architecture
+
+package "WASM Runtime 1" #E3F2FD {
+    component "microROS Publisher" as PUB #4CAF50
+    note right of PUB
+      **rcl/rclc API**
+      • rcl_init()
+      • rcl_publish()
+    end note
+}
+
+package "WASM Runtime 2" #FFF3E0 {
+    component "microROS Subscriber" as SUB #4CAF50
+    note right of SUB
+      **rcl/rclc API**
+      • rcl_init()
+      • rcl_take()
+    end note
+}
+
+cloud "Network" #FFC107 {
+    component "DDS Layer" as DDS #2196F3
+    note right of DDS
+      **Minimal DDS**
+      • Discovery
+      • Message routing
+    end note
+}
+
+PUB --> DDS : "Publish\nmessages"
+DDS --> SUB : "Forward\nmessages"
+
+note top of PUB
+  **Inside WASM:**
+  microROS API
+    ↓
+  Custom RMW
+    ↓
+  Minimal DDS
+    ↓
+  Networking
+end note
+
+note bottom of SUB
+  **Inside WASM:**
+  microROS API
+    ↓
+  Custom RMW
+    ↓
+  Minimal DDS
+    ↓
+  Networking
+end note
+
+@enduml
+

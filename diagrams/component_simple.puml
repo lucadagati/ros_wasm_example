@@ -1,0 +1,47 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam roundcorner 10
+
+title microROS in WASM - Component Diagram (Simplified)
+
+package "WASM Module" {
+    [microROS API\nrcl/rclc] as API #4CAF50
+    [Custom RMW] as RMW #2196F3
+    [Minimal DDS] as DDS #FF9800
+    [WASI Networking] as NET #9C27B0
+}
+
+API --> RMW : uses
+RMW --> DDS : uses
+DDS --> NET : uses
+
+cloud "Network" {
+    [DDS Network] as DDS_NET #FFC107
+}
+
+NET --> DDS_NET : communicates
+
+note right of API
+  **Official ROS2 API**
+  • rcl_init()
+  • rcl_publish()
+  • rcl_take()
+end note
+
+note right of RMW
+  **ROS Middleware**
+  • Bridge layer
+  • Connects API to DDS
+end note
+
+note right of DDS
+  **Data Distribution**
+  • Discovery
+  • Message routing
+  • Serialization
+end note
+
+@enduml
+
