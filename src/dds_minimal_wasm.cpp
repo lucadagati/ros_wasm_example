@@ -97,6 +97,7 @@ public:
     bool isInitialized() const { return initialized; }
     std::string getName() const { return participant_name; }
     int getDomainId() const { return domain_id; }
+    NetworkManagerWASM* getNetworkManager() const { return network_manager; }
 };
 
 // DDS Publisher
@@ -156,10 +157,11 @@ public:
         std::string serialized = serializeMessage(msg);
         
         // Send via DDS to all discovered subscribers
-        if (participant && participant->network_manager) {
+        NetworkManagerWASM* net_mgr = participant ? participant->getNetworkManager() : nullptr;
+        if (net_mgr) {
             bool sent = false;
             for (const auto& endpoint : subscriber_endpoints) {
-                if (participant->network_manager->sendTCPMessage(endpoint.address, endpoint.port, serialized)) {
+                if (net_mgr->sendTCPMessage(endpoint.address, endpoint.port, serialized)) {
                     sent = true;
                     printf("WASM: Message sent to subscriber %s:%d\n", endpoint.address.c_str(), endpoint.port);
                 }
