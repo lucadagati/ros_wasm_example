@@ -58,13 +58,25 @@ graph LR
 
 **Note**: The current prototype uses ROS Bridge for demonstration. The target architecture (microROS in WASM) is documented in the UML diagrams and PPTX presentation.
 
-### Communication Sequence Diagram
+### Communication Sequence Diagrams
 
-**UML Sequence Diagram** (PlantUML):
+**UML Sequence Diagrams** (PlantUML) showing detailed communication flow:
 
-![Sequence Diagram](diagrams/sequence.png)
+#### Publisher WASM (Environment 1)
 
-*Full PlantUML source: [`diagrams/sequence.puml`](diagrams/sequence.puml)*
+![Publisher Sequence Diagram](diagrams/sequence_publisher.png)
+
+*Shows what's inside Publisher WASM: PublisherNode class, message generation, and communication flow.*
+
+*Full PlantUML source: [`diagrams/sequence_publisher.puml`](diagrams/sequence_publisher.puml)*
+
+#### Subscriber WASM (Environment 2)
+
+![Subscriber Sequence Diagram](diagrams/sequence_subscriber.png)
+
+*Shows what's inside Subscriber WASM: SubscriberNode class, message processing, statistics calculation, and alarm system.*
+
+*Full PlantUML source: [`diagrams/sequence_subscriber.puml`](diagrams/sequence_subscriber.puml)*
 
 ### Target Communication Flow (microROS in WASM)
 
@@ -468,9 +480,15 @@ graph LR
 
 Formal UML diagrams showing the architecture:
 
-- **`diagrams/sequence.puml`** - Communication sequence diagram (current implementation)
-  - Shows WASM modules communicating via JavaScript and ROS Bridge
-  - Includes both current prototype and target architecture notes
+- **`diagrams/sequence_publisher.puml`** - Publisher WASM sequence diagram
+  - Shows detailed flow inside Publisher WASM (Environment 1)
+  - PublisherNode class, message generation, business logic
+  - Communication via JavaScript and ROS Bridge
+
+- **`diagrams/sequence_subscriber.puml`** - Subscriber WASM sequence diagram
+  - Shows detailed flow inside Subscriber WASM (Environment 2)
+  - SubscriberNode class, message processing, statistics
+  - Communication via JavaScript and ROS Bridge
 
 **Note**: Additional UML diagrams for the target architecture (microROS in WASM) can be found in `IMPLEMENTATION_PLAN.md` and `ROADMAP.md`.
 
