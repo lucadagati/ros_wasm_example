@@ -20,15 +20,18 @@ if ! command -v ros2 &> /dev/null; then
     exit 1
 fi
 
-# Source del workspace ROS2
-if [ -f "/opt/ros/humble/setup.bash" ]; then
+# Source del workspace ROS2 (auto-detect version)
+if [ -f "/opt/ros/jazzy/setup.bash" ]; then
+    source /opt/ros/jazzy/setup.bash
+    echo "✅ ROS2 Jazzy environment loaded"
+elif [ -f "/opt/ros/humble/setup.bash" ]; then
     source /opt/ros/humble/setup.bash
-    echo "✅ ROS2 Humble environment caricato"
+    echo "✅ ROS2 Humble environment loaded"
 elif [ -f "/opt/ros/foxy/setup.bash" ]; then
     source /opt/ros/foxy/setup.bash
-    echo "✅ ROS2 Foxy environment caricato"
+    echo "✅ ROS2 Foxy environment loaded"
 else
-    echo "⚠️  Setup ROS2 non trovato, provo comunque..."
+    echo "⚠️  ROS2 setup not found, trying anyway..."
 fi
 
 # Verifica che rosbridge_server sia installato
