@@ -36,6 +36,7 @@ log/
 # Emscripten cache
 .emscripten_cache/
 .emscripten_ports/
+emsdk/
 
 # Logs
 *.log

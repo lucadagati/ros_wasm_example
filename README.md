@@ -1,22 +1,22 @@
 # WASM-ROS Communication Example
 
-Due ambienti WebAssembly che comunicano tra loro tramite nodi ROS.
+Two WebAssembly environments communicating with each other via ROS nodes.
 
-## Descrizione
+## Description
 
-Questo progetto dimostra come due moduli WebAssembly indipendenti possano comunicare attraverso ROS (Robot Operating System):
+This project demonstrates how two independent WebAssembly modules can communicate through ROS (Robot Operating System):
 
-- **Ambiente 1 (Publisher)**: Un sensore di temperatura simulato in WASM che pubblica dati su un topic ROS
-- **Ambiente 2 (Subscriber)**: Un sistema di controllo in WASM che riceve i dati e attiva azioni (es: raffreddamento)
+- **Environment 1 (Publisher)**: A temperature sensor simulated in WASM that publishes data to a ROS topic
+- **Environment 2 (Subscriber)**: A control system in WASM that receives data and triggers actions (e.g., cooling)
 
-## Architettura
+## Architecture
 
 ```mermaid
 graph LR
-    A[WASM Publisher<br/>Ambiente 1<br/>Sensore Temp] -->|WebSocket| B[ROS Bridge<br/>Port 9090]
+    A[WASM Publisher<br/>Environment 1<br/>Temp Sensor] -->|WebSocket| B[ROS Bridge<br/>Port 9090]
     B -->|ROS2 Topic| C[ROS Topic<br/>sensor-temperature]
     C -->|ROS2 Topic| B
-    B -->|WebSocket| D[WASM Subscriber<br/>Ambiente 2<br/>Attuatore]
+    B -->|WebSocket| D[WASM Subscriber<br/>Environment 2<br/>Actuator]
     
     A -.->|Browser Tab 1| E[localhost:8000]
     D -.->|Browser Tab 2| E
@@ -27,7 +27,7 @@ graph LR
     style C fill:#FFC107,stroke:#333
 ```
 
-### Flusso di Comunicazione
+### Communication Flow
 
 ```mermaid
 sequenceDiagram
@@ -38,7 +38,7 @@ sequenceDiagram
     participant JS2 as JavaScript (Subscriber)
     participant S as Subscriber WASM
     
-    loop Ogni secondo
+    loop Every second
         P->>JS1: generateMessage()
         JS1->>RB: publish(topic, message)
         RB->>ROS: ROS2 publish
@@ -50,11 +50,11 @@ sequenceDiagram
     end
 ```
 
-## Prerequisiti
+## Prerequisites
 
-### Opzione 1: Sistema Completo (Consigliato)
+### Option 1: Complete System (Recommended)
 
-1. **Emscripten SDK** (per compilare C++ in WASM)
+1. **Emscripten SDK** (to compile C++ to WASM)
 ```bash
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
@@ -63,7 +63,7 @@ cd emsdk
 source ./emsdk_env.sh
 ```
 
-2. **ROS2** (Humble o Foxy)
+2. **ROS2** (Humble or Foxy)
 ```bash
 # Ubuntu/Debian
 sudo apt update
@@ -71,144 +71,146 @@ sudo apt install ros-humble-desktop
 sudo apt install ros-humble-rosbridge-suite
 ```
 
-3. **Python 3** (per il web server)
+3. **Python 3** (for web server)
 ```bash
 sudo apt install python3
 ```
 
-### Opzione 2: Solo Demo (senza compilazione)
+### Option 2: Demo Only (without compilation)
 
-Se vuoi solo vedere la demo senza ricompilare i moduli WASM:
+If you just want to see the demo without recompiling WASM modules:
 - ROS2 + rosbridge-suite
 - Python 3
-- Browser moderno (Chrome, Firefox, Edge)
+- Modern browser (Chrome, Firefox, Edge)
 
 ## Quick Start
 
-### 1. Compila i moduli WASM
+### 1. Compile WASM modules
 
 ```bash
 ./build.sh
 ```
 
-Questo compila i file C++ in `src/` in moduli WebAssembly nella directory `public/`.
+This compiles the C++ files in `src/` into WebAssembly modules in the `public/` directory.
 
-### 2. Avvia tutto il sistema
+### 2. Start the entire system
 
 ```bash
 ./start_all.sh
 ```
 
-Questo script avvia automaticamente:
-- ROS Bridge (porta 9090)
-- Web Server (porta 8000)
+This script automatically starts:
+- ROS Bridge (port 9090)
+- Web Server (port 8000)
 
-### 3. Apri i browser
+### 3. Open browsers
 
-1. Apri `http://localhost:8000/publisher.html` in una tab
-2. Apri `http://localhost:8000/subscriber.html` in un'altra tab
+1. Open `http://localhost:8000/publisher.html` in one tab
+2. Open `http://localhost:8000/subscriber.html` in another tab
 
-### 4. Connetti e comunica
+### 4. Connect and communicate
 
-**Nel Publisher:**
-1. Clicca "Connetti a ROS"
-2. Clicca "Avvia Pubblicazione"
+**In Publisher:**
+1. Click "Connect to ROS"
+2. Click "Start Publishing"
 
-**Nel Subscriber:**
-1. Clicca "Connetti a ROS"
-2. Clicca "Iscriviti al Topic"
+**In Subscriber:**
+1. Click "Connect to ROS"
+2. Click "Subscribe to Topic"
 
-Ora vedrai i dati fluire dal Publisher al Subscriber in tempo reale.
+You will now see data flowing from Publisher to Subscriber in real-time.
 
-## Struttura del Progetto
+## Project Structure
 
 ```
 wasm_test/
 ├── src/
-│   ├── publisher_module.cpp    # Modulo WASM del publisher (sensore)
-│   └── subscriber_module.cpp   # Modulo WASM del subscriber (attuatore)
+│   ├── publisher_module.cpp    # WASM module for publisher (sensor)
+│   └── subscriber_module.cpp  # WASM module for subscriber (actuator)
 ├── public/
-│   ├── publisher.html          # Interfaccia web del publisher
-│   ├── subscriber.html         # Interfaccia web del subscriber
-│   ├── simple_publisher.html   # Versione semplificata (solo JS)
-│   ├── simple_subscriber.html  # Versione semplificata (solo JS)
-│   ├── publisher_module.js     # JS generato da Emscripten
-│   ├── publisher_module.wasm   # WASM compilato
-│   ├── subscriber_module.js    # JS generato da Emscripten
-│   └── subscriber_module.wasm  # WASM compilato
-├── build.sh                    # Script di compilazione
-├── start_rosbridge.sh          # Avvia ROS Bridge
-├── start_webserver.sh          # Avvia web server
-├── start_all.sh                # Avvia tutto
-├── test_system.sh              # Script di test automatici
-├── Makefile                     # Comandi make
-├── Dockerfile                   # Container Docker
+│   ├── publisher.html          # Web interface for publisher
+│   ├── subscriber.html         # Web interface for subscriber
+│   ├── simple_publisher.html   # Simplified version (JS only)
+│   ├── simple_subscriber.html  # Simplified version (JS only)
+│   ├── publisher_module.js     # JS generated by Emscripten
+│   ├── publisher_module.wasm   # Compiled WASM
+│   ├── subscriber_module.js    # JS generated by Emscripten
+│   └── subscriber_module.wasm  # Compiled WASM
+├── build.sh                    # Build script
+├── start_rosbridge.sh          # Start ROS Bridge
+├── start_webserver.sh          # Start web server
+├── start_all.sh                # Start everything
+├── test_system.sh              # Automated test script
+├── create_pptx.py             # PPTX presentation generator
+├── microROS_WASM_K8s_Feasibility.pptx  # Feasibility presentation
+├── Makefile                     # Make commands
+├── Dockerfile                   # Docker container
 ├── docker-compose.yml           # Compose configuration
-├── package.json                 # Dipendenze Node.js
-├── requirements.txt             # Dipendenze Python/ROS
-├── README.md                    # Questa guida
-├── QUICKSTART.md                # Guida rapida
-└── ARCHITECTURE.md              # Documentazione tecnica
+├── package.json                 # Node.js dependencies
+├── requirements.txt             # Python/ROS dependencies
+├── README.md                    # This guide
+├── QUICKSTART.md                # Quick start guide
+└── ARCHITECTURE.md              # Technical documentation
 ```
 
-## Test del Sistema
+## System Testing
 
-Il progetto include uno script di test automatico per verificare la configurazione:
+The project includes an automated test script to verify the configuration:
 
 ```bash
 ./test_system.sh
 ```
 
-### Risultati Test Attuali
+### Current Test Results
 
-Eseguito il test automatico del sistema, ecco i risultati:
+Automated system test executed, here are the results:
 
-| Test | Risultato | Note |
-|------|-----------|------|
-| Emscripten installato | FAIL | Richiede installazione (vedi Prerequisiti) |
-| ROS2 installato | FAIL | Richiede installazione (vedi Prerequisiti) |
-| Python3 installato | PASS | Versione disponibile |
-| File publisher_module.cpp esiste | PASS | 1.5 KB |
-| File subscriber_module.cpp esiste | PASS | 2.5 KB |
-| File publisher.html esiste | PASS | 11 KB |
-| File subscriber.html esiste | PASS | 12 KB |
-| build.sh è eseguibile | PASS | Permessi corretti |
-| start_rosbridge.sh è eseguibile | PASS | Permessi corretti |
-| start_webserver.sh è eseguibile | PASS | Permessi corretti |
-| Porta 8000 disponibile | PASS | Nessun conflitto |
-| Porta 9090 disponibile | PASS | Nessun conflitto |
+| Test | Result | Notes |
+|------|--------|-------|
+| Emscripten installed | FAIL | Requires installation (see Prerequisites) |
+| ROS2 installed | FAIL | Requires installation (see Prerequisites) |
+| Python3 installed | PASS | Version available |
+| File publisher_module.cpp exists | PASS | 1.5 KB |
+| File subscriber_module.cpp exists | PASS | 2.5 KB |
+| File publisher.html exists | PASS | 11 KB |
+| File subscriber.html exists | PASS | 12 KB |
+| build.sh is executable | PASS | Correct permissions |
+| start_rosbridge.sh is executable | PASS | Correct permissions |
+| start_webserver.sh is executable | PASS | Correct permissions |
+| Port 8000 available | PASS | No conflicts |
+| Port 9090 available | PASS | No conflicts |
 
-**Riepilogo**: 10 test passati, 2 test falliti (Emscripten e ROS2 non installati)
+**Summary**: 10 tests passed, 2 tests failed (Emscripten and ROS2 not installed)
 
-**Nota**: I test falliti sono relativi a dipendenze esterne che devono essere installate seguendo le istruzioni nella sezione Prerequisiti. Tutti i file del progetto e gli script sono presenti e configurati correttamente.
+**Note**: Failed tests are related to external dependencies that must be installed following the instructions in the Prerequisites section. All project files and scripts are present and correctly configured.
 
-### Test Manuali della Comunicazione
+### Manual Communication Testing
 
-Puoi verificare che i moduli WASM stiano comunicando correttamente attraverso ROS:
+You can verify that WASM modules are communicating correctly through ROS:
 
 ```bash
-# Terminal separato
+# Separate terminal
 source /opt/ros/humble/setup.bash
 
-# Elenca i topic attivi
+# List active topics
 ros2 topic list
 
-# Mostra i messaggi pubblicati
+# Show published messages
 ros2 topic echo /sensor/temperature
 
-# Mostra info sul topic
+# Show topic info
 ros2 topic info /sensor/temperature
 
-# Monitora frequenza pubblicazione
+# Monitor publication frequency
 ros2 topic hz /sensor/temperature
 
-# Monitora latenza
+# Monitor latency
 ros2 topic delay /sensor/temperature
 ```
 
-## Avvio Manuale
+## Manual Startup
 
-Se preferisci avviare i componenti singolarmente:
+If you prefer to start components individually:
 
 ### Terminal 1: ROS Bridge
 ```bash
@@ -220,82 +222,82 @@ Se preferisci avviare i componenti singolarmente:
 ./start_webserver.sh
 ```
 
-### Terminal 3: Monitor ROS (opzionale)
+### Terminal 3: ROS Monitor (optional)
 ```bash
 source /opt/ros/humble/setup.bash
 ros2 topic echo /sensor/temperature
 ```
 
-## Funzionalità
+## Features
 
-### Publisher (Ambiente WASM 1)
+### Publisher (WASM Environment 1)
 
-- Generazione dati sensore temperatura simulati
-- Pubblicazione su topic ROS `/sensor/temperature`
-- Visualizzazione in tempo reale di:
-  - Numero messaggi pubblicati
-  - Valore corrente temperatura
-  - Frequenza di pubblicazione
-- Console log dettagliato
-- Controlli start/stop/reset
+- Simulated temperature sensor data generation
+- Publication to ROS topic `/sensor/temperature`
+- Real-time visualization of:
+  - Number of published messages
+  - Current temperature value
+  - Publication frequency
+- Detailed console log
+- Start/stop/reset controls
 
-### Subscriber (Ambiente WASM 2)
+### Subscriber (WASM Environment 2)
 
-- Ricezione dati dal topic ROS
-- Processamento messaggi in WASM
-- Calcolo media valori ricevuti
-- Sistema di allarme automatico (temp > 25°C)
-- Indicatore visuale temperatura
-- Console log dettagliato
-- Gestione storico valori (ultimi 10)
+- Data reception from ROS topic
+- Message processing in WASM
+- Average value calculation
+- Automatic alarm system (temp > 25°C)
+- Visual temperature indicator
+- Detailed console log
+- Value history management (last 10)
 
 ## Troubleshooting
 
-### Errore: "Failed to connect to ROS Bridge"
-- Verifica che rosbridge_server sia in esecuzione: `./start_rosbridge.sh`
-- Controlla che la porta 9090 sia libera: `lsof -i :9090`
-- Verifica che ROS2 sia configurato: `source /opt/ros/humble/setup.bash`
+### Error: "Failed to connect to ROS Bridge"
+- Verify rosbridge_server is running: `./start_rosbridge.sh`
+- Check that port 9090 is free: `lsof -i :9090`
+- Verify ROS2 is configured: `source /opt/ros/humble/setup.bash`
 
-### Errore: "emcc: command not found"
-- Attiva Emscripten: `source /path/to/emsdk/emsdk_env.sh`
-- Verifica installazione: `emcc --version`
-- Consulta la sezione Prerequisiti per l'installazione completa
+### Error: "emcc: command not found"
+- Activate Emscripten: `source /path/to/emsdk/emsdk_env.sh`
+- Verify installation: `emcc --version`
+- Consult Prerequisites section for complete installation
 
-### Moduli WASM non caricano
-- Controlla la console del browser (F12)
-- Verifica che il web server sia avviato su porta 8000
-- Assicurati che i file .wasm siano in `public/`
-- Verifica che i moduli siano stati compilati: `ls -lh public/*.wasm`
+### WASM modules not loading
+- Check browser console (F12)
+- Verify web server is running on port 8000
+- Ensure .wasm files are in `public/`
+- Verify modules were compiled: `ls -lh public/*.wasm`
 
-### ROS2 non trovato
-- Verifica installazione: `ros2 --version`
-- Source del workspace: `source /opt/ros/humble/setup.bash`
-- Installa rosbridge-suite: `sudo apt install ros-humble-rosbridge-suite`
+### ROS2 not found
+- Verify installation: `ros2 --version`
+- Source workspace: `source /opt/ros/humble/setup.bash`
+- Install rosbridge-suite: `sudo apt install ros-humble-rosbridge-suite`
 
-### Porta già in uso
+### Port already in use
 ```bash
-# Trova processo sulla porta
+# Find process on port
 lsof -i :9090
 lsof -i :8000
 
-# Termina processo se necessario
+# Terminate process if needed
 kill -9 <PID>
 ```
 
-## Come Funziona
+## How It Works
 
 ```mermaid
 flowchart TD
-    A[Compilazione C++ con Emscripten] --> B[Generazione WASM + JS Glue]
-    B --> C[Caricamento moduli in Browser]
-    C --> D[Connessione WebSocket a ROS Bridge]
-    D --> E[Publisher genera dati in WASM]
-    E --> F[JavaScript pubblica su ROS topic]
-    F --> G[ROS Bridge inoltra messaggi]
-    G --> H[Subscriber riceve da ROS topic]
-    H --> I[JavaScript passa dati a WASM]
-    I --> J[WASM processa e calcola statistiche]
-    J --> K[Aggiornamento UI in tempo reale]
+    A[Compile C++ with Emscripten] --> B[Generate WASM + JS Glue]
+    B --> C[Load modules in Browser]
+    C --> D[WebSocket connection to ROS Bridge]
+    D --> E[Publisher generates data in WASM]
+    E --> F[JavaScript publishes to ROS topic]
+    F --> G[ROS Bridge forwards messages]
+    G --> H[Subscriber receives from ROS topic]
+    H --> I[JavaScript passes data to WASM]
+    I --> J[WASM processes and calculates statistics]
+    J --> K[Real-time UI update]
     
     style A fill:#e1f5ff
     style B fill:#e1f5ff
@@ -304,35 +306,35 @@ flowchart TD
     style J fill:#fff4e1
 ```
 
-1. **Compilazione**: I file C++ vengono compilati in WebAssembly usando Emscripten con l'opzione `embind` per esporre le classi C++ a JavaScript.
+1. **Compilation**: C++ files are compiled to WebAssembly using Emscripten with `embind` option to expose C++ classes to JavaScript.
 
-2. **Caricamento**: Le pagine HTML caricano i moduli WASM come moduli ES6 JavaScript.
+2. **Loading**: HTML pages load WASM modules as ES6 JavaScript modules.
 
-3. **Connessione**: Entrambe le pagine si connettono a ROS Bridge via WebSocket (porta 9090).
+3. **Connection**: Both pages connect to ROS Bridge via WebSocket (port 9090).
 
-4. **Comunicazione**: 
-   - Il Publisher crea un oggetto `PublisherNode` in WASM che genera dati
-   - JavaScript pubblica questi dati sul topic ROS via roslib.js
-   - ROS Bridge inoltra i messaggi attraverso il sistema ROS
-   - Il Subscriber riceve i messaggi dal topic
-   - JavaScript passa i dati all'oggetto `SubscriberNode` in WASM per l'elaborazione
+4. **Communication**: 
+   - Publisher creates a `PublisherNode` object in WASM that generates data
+   - JavaScript publishes this data to ROS topic via roslib.js
+   - ROS Bridge forwards messages through ROS system
+   - Subscriber receives messages from topic
+   - JavaScript passes data to `SubscriberNode` object in WASM for processing
 
-5. **Processamento**: La logica di business (generazione sensori, controllo attuatori) è interamente in WASM per massime prestazioni.
+5. **Processing**: Business logic (sensor generation, actuator control) is entirely in WASM for maximum performance.
 
-## Tecnologie Utilizzate
+## Technologies Used
 
-- **WebAssembly (WASM)**: Runtime ad alte prestazioni nel browser
-- **Emscripten**: Compilatore C/C++ → WebAssembly
-- **ROS2**: Sistema di comunicazione robot/distributed systems
-- **rosbridge_suite**: Bridge WebSocket per ROS
-- **roslib.js**: Libreria JavaScript per ROS
-- **C++**: Linguaggio per i moduli WASM
-- **HTML5 + JavaScript ES6**: Interfacce web moderne
-- **Mermaid**: Diagrammi di architettura
+- **WebAssembly (WASM)**: High-performance runtime in browser
+- **Emscripten**: C/C++ → WebAssembly compiler
+- **ROS2**: Robot/distributed systems communication system
+- **rosbridge_suite**: WebSocket bridge for ROS
+- **roslib.js**: JavaScript library for ROS
+- **C++**: Language for WASM modules
+- **HTML5 + JavaScript ES6**: Modern web interfaces
+- **Mermaid**: Architecture diagrams
 
-## Prestazioni
+## Performance
 
-### Metriche di Latenza (stimato)
+### Latency Metrics (estimated)
 
 ```mermaid
 graph LR
@@ -349,47 +351,47 @@ graph LR
     style F fill:#4CAF50
 ```
 
-- **Latenza totale**: ~5-30ms (rete locale)
-- **Throughput**: ~1 messaggio/secondo (configurabile)
-- **Dimensione WASM**: ~50-100 KB per modulo
-- **Memoria**: ~10-20 MB per modulo
+- **Total latency**: ~5-30ms (local network)
+- **Throughput**: ~1 message/second (configurable)
+- **WASM size**: ~50-100 KB per module
+- **Memory**: ~10-20 MB per module
 
-### Ottimizzazioni
+### Optimizations
 
-- Compilazione con `-O3` per massime prestazioni
-- Memory growth dinamico per gestire dati variabili
-- Binding efficiente tramite embind
-- Serializzazione JSON ottimizzata
+- Compilation with `-O3` for maximum performance
+- Dynamic memory growth to handle variable data
+- Efficient binding via embind
+- Optimized JSON serialization
 
-## Estensioni Possibili
+## Possible Extensions
 
-- [ ] Aggiungere più sensori/attuatori
-- [ ] Implementare comunicazione bidirezionale
-- [ ] Aggiungere visualizzazione grafici in tempo reale
-- [ ] Supportare più tipi di messaggi ROS
-- [ ] Implementare servizi ROS oltre ai topics
-- [ ] Aggiungere autenticazione per rosbridge
-- [ ] Deploy su server remoto con HTTPS/WSS
-- [ ] Supporto per messaggi binari (Protocol Buffers)
-- [ ] Integrazione con RViz per visualizzazione 3D
+- [ ] Add more sensors/actuators
+- [ ] Implement bidirectional communication
+- [ ] Add real-time chart visualization
+- [ ] Support more ROS message types
+- [ ] Implement ROS services in addition to topics
+- [ ] Add authentication for rosbridge
+- [ ] Deploy on remote server with HTTPS/WSS
+- [ ] Support for binary messages (Protocol Buffers)
+- [ ] Integration with RViz for 3D visualization
 
-## Note
+## Notes
 
-- I moduli WASM sono completamente isolati e comunicano SOLO attraverso ROS
-- Ogni modulo può essere eseguito su macchine diverse cambiando l'URL di rosbridge
-- Il sistema è scalabile: puoi aggiungere N ambienti WASM che comunicano
-- La latenza dipende dalla rete e dalla configurazione di rosbridge
-- I test automatici verificano la configurazione ma non richiedono ROS/Emscripten per funzionare
+- WASM modules are completely isolated and communicate ONLY through ROS
+- Each module can run on different machines by changing rosbridge URL
+- System is scalable: you can add N WASM environments that communicate
+- Latency depends on network and rosbridge configuration
+- Automated tests verify configuration but don't require ROS/Emscripten to function
 
-## Licenza
+## License
 
-MIT License - Libero per uso personale e commerciale
+MIT License - Free for personal and commercial use
 
-## Autore
+## Author
 
-Creato come esempio didattico di comunicazione WASM-ROS
+Created as an educational example of WASM-ROS communication
 
 ---
 
-Per una guida rapida, consulta `QUICKSTART.md`.  
-Per dettagli tecnici approfonditi, consulta `ARCHITECTURE.md`.
+For a quick guide, see `QUICKSTART.md`.  
+For detailed technical information, see `ARCHITECTURE.md`.
