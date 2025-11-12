@@ -58,6 +58,14 @@ graph LR
 
 **Note**: The current prototype uses ROS Bridge for demonstration. The target architecture (microROS in WASM) is documented in the UML diagrams and PPTX presentation.
 
+### Communication Sequence Diagram
+
+**UML Sequence Diagram** (PlantUML):
+
+![Sequence Diagram](diagrams/sequence.png)
+
+*Full PlantUML source: [`diagrams/sequence.puml`](diagrams/sequence.puml)*
+
 ### Target Communication Flow (microROS in WASM)
 
 ```mermaid
@@ -458,16 +466,15 @@ graph LR
 
 ### UML Diagrams (PlantUML)
 
-Formal UML diagrams showing the target architecture (microROS in WASM):
+Formal UML diagrams showing the architecture:
 
-- `diagrams/architecture_complete.puml` - Complete system architecture
-- `diagrams/architecture.puml` - Basic architecture diagram
-- `diagrams/sequence.puml` - Communication sequence diagram
-- `diagrams/k8s_deployment.puml` - Kubernetes deployment architecture
-- `diagrams/component_diagram.puml` - System component diagram
-- `diagrams/workflow.puml` - Complete workflow diagram
+- **`diagrams/sequence.puml`** - Communication sequence diagram (current implementation)
+  - Shows WASM modules communicating via JavaScript and ROS Bridge
+  - Includes both current prototype and target architecture notes
 
-All diagrams emphasize: **ROS executes inside WASM runtime** (compiled to WASM bytecode, executed by WASM runtime, no external ROS process).
+**Note**: Additional UML diagrams for the target architecture (microROS in WASM) can be found in `IMPLEMENTATION_PLAN.md` and `ROADMAP.md`.
+
+All diagrams emphasize: **Target architecture has ROS executing inside WASM runtime** (compiled to WASM bytecode, executed by WASM runtime, no external ROS process).
 
 ### Presentation
 

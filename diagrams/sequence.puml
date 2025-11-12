@@ -6,60 +6,86 @@ skinparam roundcorner 20
 skinparam maxmessagesize 60
 skinparam ParticipantPadding 20
 
-title Communication Sequence Diagram\nROS executing in WASM Runtime
+title Communication Sequence Diagram\nWASM-ROS Communication via ROS Bridge
 
-participant "Publisher WASM\n(ROS in WASM)" as P #667eea
-participant "ROS2 DDS\n(executing in WASM)" as DDS #FFC107
-participant "ROS2 Topic\nNetwork" as TOPIC #9C27B0
-participant "ROS2 DDS\n(executing in WASM)" as DDS2 #FFC107
-participant "Subscriber WASM\n(ROS in WASM)" as S #f5576c
+participant "Publisher WASM\n(Environment 1)" as P #667eea
+participant "JavaScript\n(Publisher)" as JS1 #9C27B0
+participant "ROS Bridge\n(WebSocket)" as RB #4CAF50
+participant "ROS2 Topic\nNetwork" as ROS #FFC107
+participant "JavaScript\n(Subscriber)" as JS2 #9C27B0
+participant "Subscriber WASM\n(Environment 2)" as S #f5576c
 
 == Initialization ==
-P -> P: Initialize microROS\n(in WASM)
+P -> P: Load WASM module
 activate P
-P -> DDS: Setup DDS transport\n(in WASM)
-activate DDS
-DDS -> TOPIC: Register publisher\n(from WASM)
-activate TOPIC
-deactivate TOPIC
-deactivate DDS
+P -> JS1: Module ready
+activate JS1
+JS1 -> RB: WebSocket connect\nws://localhost:9090
+activate RB
+RB -> ROS: Register connection
+activate ROS
+deactivate ROS
+RB --> JS1: Connection established
+deactivate RB
+JS1 --> P: WASM ready
+deactivate JS1
 
-S -> S: Initialize microROS\n(in WASM)
+S -> S: Load WASM module
 activate S
-S -> DDS2: Setup DDS transport\n(in WASM)
-activate DDS2
-DDS2 -> TOPIC: Register subscriber\n(from WASM)
-activate TOPIC
-deactivate TOPIC
-deactivate DDS2
+S -> JS2: Module ready
+activate JS2
+JS2 -> RB: WebSocket connect\nws://localhost:9090
+activate RB
+RB -> ROS: Register connection
+activate ROS
+deactivate ROS
+RB --> JS2: Connection established
+deactivate RB
+JS2 --> S: WASM ready
+deactivate JS2
 
 == Message Publishing Loop ==
 loop Every second
-    P -> P: generateMessage()\n(ROS code in WASM)
-    P -> DDS: publish(topic, message)\n(ROS code in WASM)
-    activate DDS
-    DDS -> TOPIC: ROS2 DDS publish\n(from WASM)
-    activate TOPIC
-    TOPIC -> DDS2: message delivery\n(to WASM)
-    deactivate TOPIC
-    activate DDS2
-    DDS2 -> S: processMessage(data)\n(ROS code in WASM)
-    deactivate DDS2
-    S -> S: update statistics\n(ROS code in WASM)
-    deactivate DDS
+    P -> P: generateMessage()\n(business logic in WASM)
+    P --> JS1: return JSON message
+    JS1 -> JS1: Create ROSLIB.Topic
+    JS1 -> RB: publish(topic, message)\nvia WebSocket
+    activate RB
+    RB -> ROS: ROS2 publish\n/sensor/temperature
+    activate ROS
+    ROS -> ROS: Message queued
+    ROS --> RB: Message published
+    deactivate ROS
+    RB --> JS1: Publish confirmed
+    deactivate RB
+    JS1 --> P: Update statistics
+    deactivate JS1
+    
+    ROS -> RB: Message delivery\nvia ROS2 DDS
+    activate RB
+    RB -> JS2: WebSocket message\ncallback
+    activate JS2
+    JS2 -> S: processMessage(data)\n(business logic in WASM)
+    activate S
+    S -> S: Parse & process\nin WASM
+    S --> JS2: return statistics
+    deactivate S
+    JS2 -> JS2: Update UI
+    deactivate JS2
+    deactivate RB
 end
 
 note over P, S
-  **All ROS operations**
-  **execute inside WASM runtime**
+  **Current Implementation:**
   
-  • ROS code: WASM bytecode
-  • Executed by WASM runtime
-  • No external ROS process
-  • Direct WASM-to-WASM communication
+  • Business logic: WASM
+  • ROS communication: JavaScript + ROS Bridge
+  • ROS Bridge: External ROS2 process
   
-  Latency: ~5-30ms
-  Throughput: configurable
+  **Target Architecture:**
+  • All ROS code: Inside WASM
+  • Direct WASM-to-WASM: ROS2 DDS
+  • No external bridge needed
 end note
 
 @enduml
