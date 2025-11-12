@@ -18,6 +18,7 @@ __pycache__/
 env/
 venv/
 ENV/
+.venv/
 
 # ROS
 build/
