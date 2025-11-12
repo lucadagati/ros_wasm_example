@@ -1,0 +1,11 @@
+@startuml All Diagrams Master
+!theme plain
+skinparam backgroundColor #FFFFFF
+
+title microROS in WASM - All UML Diagrams\nMaster Document
+
+' This file includes all UML diagrams for the project
+' Use PlantUML to generate individual diagrams or a combined document
+
+@enduml
+

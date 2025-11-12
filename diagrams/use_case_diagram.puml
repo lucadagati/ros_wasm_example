@@ -1,0 +1,76 @@
+@startuml Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 10
+
+title Use Case Diagram\nmicroROS WASM System Use Cases
+
+left to right direction
+
+actor "K8s Administrator" as ADMIN
+actor "Application Developer" as DEV
+actor "System Monitor" as MONITOR
+actor "ROS Node" as ROS_NODE
+
+rectangle "microROS WASM System" {
+    usecase "Deploy WASM Runtime" as UC1
+    usecase "Initialize microROS" as UC2
+    usecase "Publish ROS Messages" as UC3
+    usecase "Subscribe to ROS Topics" as UC4
+    usecase "Process Messages" as UC5
+    usecase "Scale Nodes" as UC6
+    usecase "Monitor Health" as UC7
+    usecase "Update Deployment" as UC8
+    usecase "Discover ROS Nodes" as UC9
+    usecase "Handle Errors" as UC10
+    usecase "Communicate via ROS2 DDS" as UC11
+}
+
+ADMIN --> UC1 : manages
+ADMIN --> UC6 : manages
+ADMIN --> UC8 : manages
+ADMIN --> UC7 : monitors
+
+DEV --> UC2 : configures
+DEV --> UC3 : implements
+DEV --> UC4 : implements
+DEV --> UC5 : implements
+
+MONITOR --> UC7 : observes
+MONITOR --> UC10 : handles
+
+ROS_NODE --> UC9 : participates
+ROS_NODE --> UC11 : communicates
+
+UC1 --> UC2 : includes
+UC2 --> UC9 : includes
+UC3 --> UC11 : uses
+UC4 --> UC11 : uses
+UC4 --> UC5 : triggers
+UC5 --> UC10 : may trigger
+UC6 --> UC1 : extends
+UC8 --> UC1 : extends
+
+note right of UC1
+  **Deployment:**
+  • Create K8s Pod
+  • Load WASM runtime
+  • Configure resources
+end note
+
+note right of UC2
+  **Initialization:**
+  • Load microROS core
+  • Setup ROS2 DDS
+  • Register nodes
+end note
+
+note right of UC11
+  **Communication:**
+  • Direct ROS2 DDS
+  • No bridge needed
+  • Native protocol
+end note
+
+@enduml
+

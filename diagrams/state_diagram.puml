@@ -1,0 +1,74 @@
+@startuml State Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 10
+
+title microROS Node State Diagram\nState Machine for WASM Nodes
+
+state "Initialization" as INIT #FFE0B2
+state "ROS2 DDS Setup" as DDS_SETUP #FFF9C4
+state "Discovery" as DISCOVERY #C8E6C9
+state "Ready" as READY #BBDEFB
+state "Publishing" as PUB_STATE #E1BEE7
+state "Subscribing" as SUB_STATE #F8BBD0
+state "Processing" as PROCESS #FFCCBC
+state "Error" as ERROR #FFCDD2
+state "Shutdown" as SHUTDOWN #CFD8DC
+
+[*] --> INIT : Start
+
+INIT --> DDS_SETUP : Load WASM module
+DDS_SETUP --> DISCOVERY : Initialize ROS2 DDS
+DISCOVERY --> READY : Nodes discovered
+READY --> PUB_STATE : Start publishing
+READY --> SUB_STATE : Start subscribing
+
+PUB_STATE --> PROCESS : Generate message
+PROCESS --> PUB_STATE : Message published
+PUB_STATE --> READY : Stop publishing
+
+SUB_STATE --> PROCESS : Receive message
+PROCESS --> SUB_STATE : Message processed
+SUB_STATE --> READY : Stop subscribing
+
+READY --> ERROR : Error occurred
+ERROR --> READY : Recover
+ERROR --> SHUTDOWN : Fatal error
+
+PUB_STATE --> ERROR : Publish failed
+SUB_STATE --> ERROR : Subscribe failed
+PROCESS --> ERROR : Processing failed
+
+READY --> SHUTDOWN : Graceful shutdown
+SHUTDOWN --> [*] : Terminate
+
+note right of INIT
+  **Initialization State:**
+  • Load WASM module
+  • Initialize WASM runtime
+  • Allocate memory
+end note
+
+note right of DISCOVERY
+  **Discovery State:**
+  • ROS2 DDS discovery
+  • Find other nodes
+  • Register topics
+end note
+
+note right of READY
+  **Ready State:**
+  • All systems initialized
+  • Ready for operations
+  • Can publish/subscribe
+end note
+
+note right of ERROR
+  **Error State:**
+  • Handle errors
+  • Log issues
+  • Attempt recovery
+end note
+
+@enduml
+

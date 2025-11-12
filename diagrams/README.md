@@ -4,11 +4,32 @@ This directory contains formal UML diagrams for the WASM-ROS Communication proje
 
 ## PlantUML Source Files
 
-- `architecture.puml` - System architecture diagram showing WASM modules, ROS Bridge, and communication flow
-- `sequence.puml` - Sequence diagram showing message flow between components
-- `k8s_deployment.puml` - Kubernetes deployment architecture
-- `component_diagram.puml` - Component diagram showing system modules and dependencies
-- `class_diagram.puml` - Class diagram for WASM modules (PublisherNode and SubscriberNode)
+### Core Architecture Diagrams
+
+- **`architecture.puml`** - Basic system architecture showing microROS in WASM
+- **`architecture_complete.puml`** - Complete architecture with Kubernetes orchestration
+- **`k8s_deployment.puml`** - Kubernetes deployment architecture
+- **`deployment_diagram.puml`** - Infrastructure deployment diagram
+
+### Communication & Flow Diagrams
+
+- **`sequence.puml`** - Sequence diagram showing message flow between components
+- **`workflow.puml`** - Complete workflow from deployment to message processing
+
+### System Structure Diagrams
+
+- **`component_diagram.puml`** - Component diagram showing system modules and dependencies
+- **`package_diagram.puml`** - Package structure and organization
+- **`class_diagram.puml`** - Class diagram for WASM modules (PublisherNode and SubscriberNode)
+
+### Behavioral Diagrams
+
+- **`state_diagram.puml`** - State machine for microROS nodes
+- **`use_case_diagram.puml`** - Use cases for the system
+
+### Master File
+
+- **`all_diagrams.puml`** - Master document (placeholder for combined view)
 
 ## Generated PNG Files
 
@@ -28,13 +49,45 @@ Or if PlantUML is installed locally:
 ./convert_uml_to_png.sh
 ```
 
-## Diagram Types
+## Diagram Types Summary
 
-1. **Architecture Diagram**: High-level system architecture
-2. **Sequence Diagram**: Communication flow between components
-3. **K8s Deployment Diagram**: Kubernetes orchestration structure
-4. **Component Diagram**: System components and their relationships
-5. **Class Diagram**: WASM module class structures
+1. **Architecture Diagrams** (4):
+   - Basic architecture
+   - Complete architecture with K8s
+   - K8s deployment
+   - Infrastructure deployment
 
-All diagrams are included in the PPTX presentation.
+2. **Communication Diagrams** (2):
+   - Sequence diagram
+   - Workflow diagram
 
+3. **Structure Diagrams** (3):
+   - Component diagram
+   - Package diagram
+   - Class diagram
+
+4. **Behavioral Diagrams** (2):
+   - State diagram
+   - Use case diagram
+
+**Total: 12 UML diagrams**
+
+## Key Architecture Points
+
+All diagrams show:
+- **microROS runs INSIDE WASM Runtime** (not external)
+- **Direct ROS2 DDS communication** between WASM environments
+- **No external ROS Bridge** needed
+- **Kubernetes orchestration** of WASM runtimes
+- **Complete isolation** and portability
+
+## Usage in PPTX
+
+Selected diagrams are included in the PPTX presentation:
+- Complete Architecture Schema
+- System Workflow
+- Communication Sequence
+- K8s Deployment
+- Component & Class Diagrams
+
+All diagrams are available in both PlantUML source (`.puml`) and PNG format (`.png`).

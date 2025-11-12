@@ -1,0 +1,79 @@
+@startuml Deployment Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam roundcorner 10
+
+title Deployment Diagram\nmicroROS WASM on Kubernetes Infrastructure
+
+node "Kubernetes Cluster" {
+    artifact "K8s Pod 1" {
+        artifact "WASM Runtime Container" as CONTAINER1 #667eea
+        artifact "microROS Publisher.wasm" as WASM1 #4CAF50
+        artifact "WASI Runtime" as WASI1 #FF9800
+        
+        CONTAINER1 --> WASM1 : executes
+        WASM1 --> WASI1 : uses
+    }
+    
+    artifact "K8s Pod 2" {
+        artifact "WASM Runtime Container" as CONTAINER2 #667eea
+        artifact "microROS Subscriber.wasm" as WASM2 #f5576c
+        artifact "WASI Runtime" as WASI2 #FF9800
+        
+        CONTAINER2 --> WASM2 : executes
+        WASM2 --> WASI2 : uses
+    }
+    
+    database "ROS2 DDS Network" {
+        component "Topic: /sensor/temperature" as TOPIC
+    }
+}
+
+node "Kubernetes Control Plane" {
+    component "API Server" as API
+    component "etcd" as ETCD
+    component "Scheduler" as SCHED
+    component "Controller Manager" as CTRL
+}
+
+node "Network Layer" {
+    component "Service Mesh" as MESH
+    component "Load Balancer" as LB
+    component "Ingress" as INGRESS
+}
+
+API --> CONTAINER1 : manages
+API --> CONTAINER2 : manages
+ETCD --> API : stores state
+SCHED --> CONTAINER1 : schedules
+SCHED --> CONTAINER2 : schedules
+CTRL --> CONTAINER1 : monitors
+CTRL --> CONTAINER2 : monitors
+
+WASM1 --> TOPIC : ROS2 DDS
+WASM2 --> TOPIC : ROS2 DDS
+
+MESH --> CONTAINER1 : network policy
+MESH --> CONTAINER2 : network policy
+LB --> CONTAINER1 : load balance
+LB --> CONTAINER2 : load balance
+
+note right of CONTAINER1
+  **Deployment Unit:**
+  • Container image with WASM runtime
+  • microROS compiled to WASM
+  • WASI for system interface
+  • All in one container
+end note
+
+note right of API
+  **K8s manages:**
+  • Pod lifecycle
+  • Resource allocation
+  • Health monitoring
+  • Auto-scaling
+end note
+
+@enduml
+
