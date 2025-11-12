@@ -2,15 +2,20 @@
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam classAttributeIconSize 0
+skinparam roundcorner 10
 
-title WASM Module Class Diagram
+title WASM Module Class Diagram\nmicroROS Nodes in WebAssembly
 
 class PublisherNode {
     -int message_count
     -double sensor_value
+    -microROS::Node* ros_node
+    -microROS::Publisher* publisher
     --
     +PublisherNode()
+    +initializeROS() : void
     +generateMessage() : string
+    +publishToTopic() : void
     +getMessageCount() : int
     +getSensorValue() : double
     +reset() : void
@@ -21,27 +26,54 @@ class SubscriberNode {
     -vector<double> received_values
     -double last_value
     -string last_message
+    -microROS::Node* ros_node
+    -microROS::Subscriber* subscriber
     --
     +SubscriberNode()
+    +initializeROS() : void
     +processMessage(message : string) : void
+    +callback(data : const void*) : void
     +getMessagesReceived() : int
     +getLastValue() : double
     +getAverageValue() : double
     +reset() : void
 }
 
+class "microROS::Node" as ROSNode {
+    +init() : int
+    +spin() : void
+    +destroy() : void
+}
+
+class "microROS::Publisher" as ROSPub {
+    +publish(msg : const void*) : int
+}
+
+class "microROS::Subscriber" as ROSSub {
+    +setCallback(cb : void*) : void
+}
+
+PublisherNode --> ROSNode : uses
+PublisherNode --> ROSPub : uses
+SubscriberNode --> ROSNode : uses
+SubscriberNode --> ROSSub : uses
+
 note right of PublisherNode
-    WASM Module
-    Generates sensor data
-    Publishes to ROS topic
+    **Runs entirely in WASM**
+    
+    • microROS core compiled to WASM
+    • ROS2 DDS transport in WASM
+    • Direct ROS communication
+    • No external bridge needed
 end note
 
 note right of SubscriberNode
-    WASM Module
-    Receives ROS messages
-    Processes data
-    Calculates statistics
+    **All ROS operations**
+    **execute in WASM runtime**
+    
+    • Callback handling in WASM
+    • Message processing in WASM
+    • Statistics calculation in WASM
 end note
 
 @enduml
-

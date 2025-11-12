@@ -2,38 +2,52 @@
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam componentStyle rectangle
+skinparam roundcorner 10
+skinparam shadowing false
 
-title WASM-ROS Communication Architecture
+title WASM-ROS Communication Architecture\nmicroROS running inside WebAssembly Runtime
 
-package "Browser Environment" {
-    component [WASM Publisher\nEnvironment 1\nTemp Sensor] as Publisher #667eea
-    component [WASM Subscriber\nEnvironment 2\nActuator] as Subscriber #f5576c
+package "Kubernetes Cluster" {
+    node "K8s Pod 1" {
+        component [WASM Runtime] as WASM1 #667eea
+        component [microROS\nPublisher Node] as PUB #4CAF50
+        component [ROS2 DDS\nTransport] as DDS1 #FFC107
+        WASM1 --> PUB : contains
+        PUB --> DDS1 : uses
+    }
+    
+    node "K8s Pod 2" {
+        component [WASM Runtime] as WASM2 #667eea
+        component [microROS\nSubscriber Node] as SUB #f5576c
+        component [ROS2 DDS\nTransport] as DDS2 #FFC107
+        WASM2 --> SUB : contains
+        SUB --> DDS2 : uses
+    }
+    
+    cloud "ROS2 DDS Network" as ROSNET #9C27B0 {
+        component [/sensor/temperature\nTopic] as TOPIC
+    }
+    
+    DDS1 <--> ROSNET : ROS2 DDS
+    ROSNET <--> DDS2 : ROS2 DDS
+    PUB --> TOPIC : publishes
+    TOPIC --> SUB : subscribes
 }
 
-component [ROS Bridge\nWebSocket\nPort 9090] as Bridge #4CAF50
-component [ROS2 Topic\n/sensor/temperature] as Topic #FFC107
-
-node "Browser Tab 1" as Tab1
-node "Browser Tab 2" as Tab2
-
-Publisher --> Bridge : WebSocket
-Bridge --> Topic : ROS2 DDS
-Topic --> Bridge : ROS2 DDS
-Bridge --> Subscriber : WebSocket
-
-Publisher ..> Tab1 : runs in
-Subscriber ..> Tab2 : runs in
-
-note right of Publisher
-  Generates temperature data
-  Publishes to ROS topic
+note right of WASM1
+  **WASM Runtime contains:**
+  • microROS core
+  • ROS2 DDS layer
+  • Publisher logic
+  All running in WASM
 end note
 
-note right of Subscriber
-  Receives temperature data
-  Processes in WASM
-  Triggers actions
+note right of WASM2
+  **WASM Runtime contains:**
+  • microROS core
+  • ROS2 DDS layer
+  • Subscriber logic
+  All running in WASM
 end note
 
 @enduml
-

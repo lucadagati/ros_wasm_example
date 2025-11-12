@@ -1,43 +1,57 @@
 @startuml Component Diagram
 !theme plain
 skinparam backgroundColor #FFFFFF
+skinparam roundcorner 10
 
-title System Component Diagram
+title System Component Diagram\nmicroROS Components in WASM
 
-package "WebAssembly Modules" {
-    component [Publisher Module\nC++/WASM] as PM #667eea
-    component [Subscriber Module\nC++/WASM] as SM #f5576c
+package "WASM Runtime Environment" {
+    component [WASM Runtime\n(Wasmtime/Wasmer)] as RUNTIME #667eea
+    
+    package "microROS Stack (in WASM)" {
+        component [microROS Core] as CORE #4CAF50
+        component [ROS2 DDS Layer] as DDS #FFC107
+        component [WASI Interface] as WASI #9C27B0
+        component [Node Logic] as NODE #f5576c
+        
+        CORE --> DDS : uses
+        CORE --> WASI : system calls
+        CORE --> NODE : manages
+        DDS --> WASI : network I/O
+    }
+    
+    RUNTIME --> CORE : executes
+    RUNTIME --> DDS : executes
+    RUNTIME --> NODE : executes
 }
 
-package "JavaScript Layer" {
-    component [Publisher JS\nGlue Code] as PJ #4CAF50
-    component [Subscriber JS\nGlue Code] as SJ #4CAF50
-    component [roslib.js] as ROSLIB #4CAF50
+package "Kubernetes Layer" {
+    component [K8s Pod] as POD
+    component [Container Runtime] as CONTAINER
+    component [Service Mesh] as MESH
+    
+    POD --> CONTAINER : contains
+    CONTAINER --> RUNTIME : runs
+    MESH --> POD : manages
 }
 
-package "ROS Infrastructure" {
-    component [ROS Bridge\nWebSocket] as RB #FFC107
-    component [ROS2 DDS\nTopic System] as DDS #9C27B0
+package "ROS2 Network" {
+    component [DDS Discovery] as DISCOVERY
+    component [ROS Topics] as TOPICS
+    component [ROS Services] as SERVICES
+    
+    DDS --> DISCOVERY : participates
+    DDS --> TOPICS : publishes/subscribes
+    DDS --> SERVICES : provides/consumes
 }
 
-package "Web Interface" {
-    component [Publisher HTML] as PH
-    component [Subscriber HTML] as SH
-}
-
-PH --> PJ : uses
-PJ --> PM : loads
-PJ --> ROSLIB : uses
-ROSLIB --> RB : connects
-
-SH --> SJ : uses
-SJ --> SM : loads
-SJ --> ROSLIB : uses
-ROSLIB --> RB : connects
-
-RB <--> DDS : ROS2 protocol
-PM --> PJ : embind
-SM --> SJ : embind
+note right of CORE
+  **All ROS functionality**
+  **runs inside WASM:**
+  
+  • No external bridge
+  • Direct DDS communication
+  • Full ROS2 compatibility
+end note
 
 @enduml
-

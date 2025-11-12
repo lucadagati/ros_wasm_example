@@ -2,34 +2,64 @@
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam componentStyle rectangle
+skinparam roundcorner 10
 
-title Kubernetes Deployment Architecture
+title Kubernetes Deployment Architecture\nmicroROS running in WASM Runtime
 
 package "Kubernetes Cluster" {
-    node "K8s Pod 1" {
-        component [WASM Runtime] as WASM1 #667eea
-        component [microROS\nNode A] as NODE1 #4CAF50
-        WASM1 --> NODE1 : hosts
+    rectangle "K8s Pod 1" {
+        component [WASM Runtime\n(Wasmtime/Wasmer)] as RT1 #667eea
+        component [microROS Core] as CORE1 #4CAF50
+        component [ROS2 DDS Layer] as DDS1 #FFC107
+        component [Publisher Node] as NODE1 #9C27B0
+        
+        RT1 --> CORE1 : executes
+        CORE1 --> DDS1 : uses
+        CORE1 --> NODE1 : manages
     }
     
-    node "K8s Pod 2" {
-        component [WASM Runtime] as WASM2 #667eea
-        component [microROS\nNode B] as NODE2 #4CAF50
-        WASM2 --> NODE2 : hosts
+    rectangle "K8s Pod 2" {
+        component [WASM Runtime\n(Wasmtime/Wasmer)] as RT2 #667eea
+        component [microROS Core] as CORE2 #4CAF50
+        component [ROS2 DDS Layer] as DDS2 #FFC107
+        component [Subscriber Node] as NODE2 #f5576c
+        
+        RT2 --> CORE2 : executes
+        CORE2 --> DDS2 : uses
+        CORE2 --> NODE2 : manages
     }
     
-    NODE1 <--> NODE2 : ROS Topics\n/Services
+    cloud "ROS2 DDS Network" {
+        component [/sensor/temperature] as TOPIC
+        component [Other ROS Nodes] as OTHER
+    }
+    
+    DDS1 <--> TOPIC : ROS2 DDS
+    DDS2 <--> TOPIC : ROS2 DDS
+    TOPIC <--> OTHER : ROS2 DDS
 }
 
-cloud "Kubernetes Orchestration" {
-    note right
-        K8s manages:
-        • Deployment & Scaling
-        • Health Checks
-        • Updates & Recovery
-        • Service Discovery
-    end note
+package "Kubernetes Orchestration" {
+    component [K8s API Server] as K8S
+    component [Service Discovery] as SVC
+    component [Health Checks] as HEALTH
+    
+    K8S --> RT1 : manages
+    K8S --> RT2 : manages
+    SVC --> RT1 : discovers
+    SVC --> RT2 : discovers
+    HEALTH --> RT1 : monitors
+    HEALTH --> RT2 : monitors
 }
+
+note right of RT1
+  **Complete microROS stack**
+  **runs inside WASM:**
+  
+  • microROS core
+  • ROS2 DDS transport
+  • Node logic
+  • All in WASM sandbox
+end note
 
 @enduml
-
