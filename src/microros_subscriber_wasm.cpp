@@ -79,7 +79,7 @@ public:
         }
         
         // Initialize executor
-        ret = rclc_executor_init(&executor, &support.context, 1, NULL);
+        ret = rclc_executor_init(&executor, support.context, 1, NULL);
         if (ret != RCL_RET_OK) {
             printf("WASM: Failed to initialize executor\n");
             return false;
