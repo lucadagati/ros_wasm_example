@@ -1,0 +1,94 @@
+@startuml Complete Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam roundcorner 10
+skinparam shadowing false
+
+title Complete System Architecture\nmicroROS in WASM on Kubernetes
+
+package "Kubernetes Cluster" {
+    
+    rectangle "K8s Pod 1 - Publisher" {
+        component [WASM Runtime\nWasmtime/Wasmer] as RT1 #667eea
+        
+        package "microROS Stack (in WASM)" {
+            component [microROS Core] as CORE1 #4CAF50
+            component [ROS2 DDS Layer] as DDS1 #FFC107
+            component [Publisher Node] as PUB #9C27B0
+            component [WASI Interface] as WASI1 #FF9800
+        }
+        
+        RT1 --> CORE1
+        CORE1 --> DDS1
+        CORE1 --> PUB
+        DDS1 --> WASI1
+    }
+    
+    rectangle "K8s Pod 2 - Subscriber" {
+        component [WASM Runtime\nWasmtime/Wasmer] as RT2 #667eea
+        
+        package "microROS Stack (in WASM)" {
+            component [microROS Core] as CORE2 #4CAF50
+            component [ROS2 DDS Layer] as DDS2 #FFC107
+            component [Subscriber Node] as SUB #f5576c
+            component [WASI Interface] as WASI2 #FF9800
+        }
+        
+        RT2 --> CORE2
+        CORE2 --> DDS2
+        CORE2 --> SUB
+        DDS2 --> WASI2
+    }
+    
+    cloud "ROS2 DDS Network" {
+        component [/sensor/temperature\nTopic] as TOPIC
+        component [DDS Discovery] as DISCOVERY
+        component [Other ROS Nodes] as OTHER
+    }
+    
+    DDS1 <--> DISCOVERY : DDS
+    DDS2 <--> DISCOVERY : DDS
+    PUB --> TOPIC : publishes
+    TOPIC --> SUB : subscribes
+    TOPIC <--> OTHER : ROS2 DDS
+}
+
+package "Kubernetes Orchestration" {
+    component [K8s API Server] as K8S
+    component [Service Discovery] as SVC
+    component [Health Monitor] as HEALTH
+    component [Auto Scaling] as SCALE
+    
+    K8S --> RT1 : manages
+    K8S --> RT2 : manages
+    SVC --> RT1 : discovers
+    SVC --> RT2 : discovers
+    HEALTH --> RT1 : monitors
+    HEALTH --> RT2 : monitors
+    SCALE --> RT1 : scales
+    SCALE --> RT2 : scales
+}
+
+note right of RT1
+  **Complete microROS stack**
+  **runs inside WASM:**
+  
+  • No external bridge
+  • Direct ROS2 DDS
+  • Full isolation
+  • Portable & secure
+end note
+
+note right of K8S
+  **K8s provides:**
+  
+  • Orchestration
+  • Scaling
+  • Health checks
+  • Service discovery
+  • Updates & rollbacks
+end note
+
+@enduml
+
