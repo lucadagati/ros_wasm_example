@@ -37,6 +37,11 @@ log/
 .emscripten_cache/
 .emscripten_ports/
 emsdk/
+*.pptx
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 
 # Logs
 *.log
