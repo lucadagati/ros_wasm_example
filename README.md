@@ -17,33 +17,107 @@ This project implements ROS nodes that run **entirely inside WASM runtime** usin
 
 ## Architecture
 
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph "WASM Runtime 1"
+        PUB[microROS Publisher<br/>rcl/rclc API]
+        PUB_RMW[Custom RMW]
+        PUB_DDS[Minimal DDS]
+        PUB_NET[WASI Networking]
+    end
+    
+    subgraph "Network"
+        DDS_NET[DDS Network Layer]
+    end
+    
+    subgraph "WASM Runtime 2"
+        SUB_NET[WASI Networking]
+        SUB_DDS[Minimal DDS]
+        SUB_RMW[Custom RMW]
+        SUB[microROS Subscriber<br/>rcl/rclc API]
+    end
+    
+    PUB --> PUB_RMW
+    PUB_RMW --> PUB_DDS
+    PUB_DDS --> PUB_NET
+    PUB_NET --> DDS_NET
+    DDS_NET --> SUB_NET
+    SUB_NET --> SUB_DDS
+    SUB_DDS --> SUB_RMW
+    SUB_RMW --> SUB
+    
+    style PUB fill:#4CAF50
+    style SUB fill:#4CAF50
+    style DDS_NET fill:#FFC107
+    style PUB_DDS fill:#2196F3
+    style SUB_DDS fill:#2196F3
 ```
-WASM Runtime 1 (Browser/Wasmer)
-  ↓
-microROS API (rcl/rclc) ← Official ROS2 API
-  ↓
-Custom RMW (ROS Middleware)
-  ↓
-Minimal DDS (Data Distribution Service)
-  ↓
-WASI Networking (Real sockets)
-  ↓
-Network
-  ↓
-WASI Networking (Real sockets)
-  ↓
-Minimal DDS (Data Distribution Service)
-  ↓
-Custom RMW (ROS Middleware)
-  ↓
-microROS API (rcl/rclc) ← Official ROS2 API
-  ↓
-WASM Runtime 2 (Browser/Wasmer)
+
+### Component Diagram
+
+```mermaid
+graph LR
+    subgraph "WASM Module"
+        API[microROS API<br/>rcl/rclc]
+        RMW[Custom RMW]
+        DDS[Minimal DDS]
+        NET[WASI Networking]
+    end
+    
+    NETWORK[Network]
+    
+    API -->|uses| RMW
+    RMW -->|uses| DDS
+    DDS -->|uses| NET
+    NET -->|communicates| NETWORK
+    
+    style API fill:#4CAF50
+    style RMW fill:#2196F3
+    style DDS fill:#FF9800
+    style NET fill:#9C27B0
+    style NETWORK fill:#FFC107
 ```
 
 ### Sequence Diagram
 
-See `diagrams/sequence_microros_wasm.puml` for detailed communication flow.
+```mermaid
+sequenceDiagram
+    participant PUB as Publisher WASM
+    participant SUB as Subscriber WASM
+    participant DDS as DDS Network
+    
+    Note over PUB,SUB: Initialization Phase
+    
+    PUB->>PUB: rcl_init()
+    PUB->>PUB: rcl_node_init()
+    PUB->>PUB: rcl_publisher_init()
+    
+    SUB->>SUB: rcl_init()
+    SUB->>SUB: rcl_node_init()
+    SUB->>SUB: rcl_subscription_init()
+    
+    Note over PUB,SUB: Discovery Phase
+    
+    PUB->>DDS: UDP Discovery
+    DDS->>SUB: Notify publisher
+    SUB->>DDS: Subscribe to topic
+    
+    Note over PUB,SUB: Message Publishing Loop
+    
+    loop Every second
+        PUB->>PUB: rcl_publish()
+        PUB->>DDS: Send message
+        DDS->>SUB: Forward message
+        SUB->>SUB: rcl_take()
+        Note over SUB: Process message
+    end
+```
+
+### Detailed Sequence Diagram
+
+See `diagrams/sequence_microros_wasm.puml` for detailed communication flow with all API calls.
 
 **Key Points:**
 - **ROS executes inside WASM**: microROS API, RMW, DDS layer, and node logic are all compiled to WASM bytecode
