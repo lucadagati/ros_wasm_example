@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Build script for microROS in WASM
-# Compiles ROS nodes that run INSIDE WASM runtime
+# Build script for ROS nodes in WASM
+# Compiles ROS nodes that run INSIDE WASM runtime using minimal DDS
 
 set -e
 
-echo "Building microROS nodes for WASM..."
+echo "=========================================="
+echo "Building ROS nodes for WASM"
+echo "=========================================="
+echo ""
 
 # Check if Emscripten is available
 if ! command -v emcc &> /dev/null; then
@@ -14,44 +17,77 @@ if ! command -v emcc &> /dev/null; then
     exit 1
 fi
 
+echo "✓ Emscripten found: $(which emcc)"
+echo ""
+
 # Create output directory
 mkdir -p wasm_output
 
-# Build microROS node (publisher)
+# Build ROS Publisher node (includes DDS)
 echo "Building ROS Publisher node (WASM)..."
-emcc src/microros_node_wasm.cpp \
+echo "----------------------------------------"
+emcc src/ros_publisher_wasm.cpp \
     -I. \
     -s WASM=1 \
     -s MODULARIZE=1 \
-    -s EXPORT_NAME="createMicroROSModule" \
+    -s EXPORT_NAME="createROSPublisherModule" \
     -s EXPORTED_FUNCTIONS='["_malloc","_free"]' \
-    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","addOnPostRun"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s MAXIMUM_MEMORY=128MB \
+    -s ENVIRONMENT=web,worker \
     -O2 \
-    -o wasm_output/microros_node.js
+    --bind \
+    -o wasm_output/ros_publisher.js
 
-echo "✓ ROS Publisher node built: wasm_output/microros_node.js"
-echo "✓ WASM module: wasm_output/microros_node.wasm"
-
-# Build minimal DDS layer
-echo "Building minimal DDS layer (WASM)..."
-emcc src/dds_minimal_wasm.cpp \
-    -I. \
-    -s WASM=1 \
-    -s MODULARIZE=1 \
-    -s EXPORT_NAME="createDDSModule" \
-    -s EXPORTED_FUNCTIONS='["_malloc","_free"]' \
-    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s MAXIMUM_MEMORY=128MB \
-    -O2 \
-    -o wasm_output/dds_minimal.js
-
-echo "✓ Minimal DDS layer built: wasm_output/dds_minimal.js"
-echo "✓ WASM module: wasm_output/dds_minimal.wasm"
-
+if [ -f wasm_output/ros_publisher.wasm ]; then
+    SIZE=$(du -h wasm_output/ros_publisher.wasm | cut -f1)
+    echo "✓ ROS Publisher node built: wasm_output/ros_publisher.js"
+    echo "  WASM module: wasm_output/ros_publisher.wasm ($SIZE)"
+else
+    echo "✗ Failed to build ROS Publisher node"
+    exit 1
+fi
 echo ""
+
+# Build ROS Subscriber node (includes DDS)
+echo "Building ROS Subscriber node (WASM)..."
+echo "----------------------------------------"
+emcc src/ros_subscriber_wasm.cpp \
+    -I. \
+    -s WASM=1 \
+    -s MODULARIZE=1 \
+    -s EXPORT_NAME="createROSSubscriberModule" \
+    -s EXPORTED_FUNCTIONS='["_malloc","_free"]' \
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","addOnPostRun"]' \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s MAXIMUM_MEMORY=128MB \
+    -s ENVIRONMENT=web,worker \
+    -O2 \
+    --bind \
+    -o wasm_output/ros_subscriber.js
+
+if [ -f wasm_output/ros_subscriber.wasm ]; then
+    SIZE=$(du -h wasm_output/ros_subscriber.wasm | cut -f1)
+    echo "✓ ROS Subscriber node built: wasm_output/ros_subscriber.js"
+    echo "  WASM module: wasm_output/ros_subscriber.wasm ($SIZE)"
+else
+    echo "✗ Failed to build ROS Subscriber node"
+    exit 1
+fi
+echo ""
+
+echo "=========================================="
 echo "Build complete!"
-echo "WASM modules are in: wasm_output/"
+echo "=========================================="
+echo ""
+echo "WASM modules:"
+echo "  • Publisher:  wasm_output/ros_publisher.{js,wasm}"
+echo "  • Subscriber: wasm_output/ros_subscriber.{js,wasm}"
+echo ""
+echo "Next steps:"
+echo "  1. Test publisher: node test_publisher.js"
+echo "  2. Test subscriber: node test_subscriber.js"
+echo "  3. Test communication: node test_communication.js"
+echo ""
 
