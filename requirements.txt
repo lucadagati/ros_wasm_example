@@ -1,4 +1,7 @@
-rclpy
-std_msgs
-rosbridge_suite
+# Python dependencies for microROS in WASM project
+# Note: rclpy, std_msgs, and rosbridge_suite are ROS2 packages
+# They are installed automatically when ROS2 is installed via apt
+# Do NOT install them via pip - they require ROS2 to be installed first
 
+# Standard Python packages (installable via pip)
+python-pptx

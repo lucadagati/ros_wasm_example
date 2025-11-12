@@ -133,59 +133,81 @@ echo "----------------------------------------"
 if [ ! -f "requirements.txt" ]; then
     echo -e "${YELLOW}⚠${NC} requirements.txt not found, skipping Python dependencies"
 else
-    # Try to install using apt first (for system packages)
-    if command_exists apt; then
-        echo "Checking for system packages..."
-        if grep -q "python-pptx\|python3-pptx" requirements.txt 2>/dev/null; then
-            if apt list --installed 2>/dev/null | grep -q "python3-pptx"; then
-                echo -e "${GREEN}✓${NC} python3-pptx already installed"
-            else
-                echo "Installing python3-pptx via apt..."
-                sudo apt update
-                sudo apt install -y python3-pptx 2>/dev/null || echo -e "${YELLOW}⚠${NC} python3-pptx not available via apt"
+    # Filter out ROS2 packages (they can't be installed via pip)
+    # Create a temporary requirements file without ROS2 packages
+    TEMP_REQUIREMENTS=$(mktemp)
+    grep -v -E "^(rclpy|std_msgs|rosbridge_suite|#.*ROS)" requirements.txt > "$TEMP_REQUIREMENTS" 2>/dev/null || true
+    
+    # Check if there are any packages to install
+    if [ ! -s "$TEMP_REQUIREMENTS" ] || [ "$(grep -v '^#' "$TEMP_REQUIREMENTS" | grep -v '^$' | wc -l)" -eq 0 ]; then
+        echo -e "${GREEN}✓${NC} No pip-installable packages in requirements.txt"
+        echo -e "${YELLOW}ℹ${NC} Note: ROS2 packages (rclpy, std_msgs, rosbridge_suite) are installed with ROS2"
+        rm -f "$TEMP_REQUIREMENTS"
+    else
+        # Try to install using apt first (for system packages)
+        if command_exists apt; then
+            echo "Checking for system packages..."
+            if grep -q "python-pptx\|python3-pptx" "$TEMP_REQUIREMENTS" 2>/dev/null; then
+                if apt list --installed 2>/dev/null | grep -q "python3-pptx"; then
+                    echo -e "${GREEN}✓${NC} python3-pptx already installed"
+                else
+                    echo "Installing python3-pptx via apt..."
+                    sudo apt update
+                    sudo apt install -y python3-pptx 2>/dev/null || echo -e "${YELLOW}⚠${NC} python3-pptx not available via apt"
+                fi
             fi
         fi
-    fi
-    
-    # Try pip with different methods
-    if command_exists pip3; then
-        echo "Installing Python packages via pip..."
         
-        # Method 1: User installation (preferred)
-        if pip3 install --user -r requirements.txt 2>/dev/null; then
-            echo -e "${GREEN}✓${NC} Python packages installed (user)"
-        # Method 2: Break system packages (if user installation fails)
-        elif pip3 install --break-system-packages -r requirements.txt 2>/dev/null; then
-            echo -e "${GREEN}✓${NC} Python packages installed (--break-system-packages)"
-        # Method 3: Virtual environment (safest)
-        elif [ ! -d "venv" ]; then
-            echo "Creating virtual environment..."
-            python3 -m venv venv
+        # Try pip with different methods
+        if command_exists pip3; then
+            echo "Installing Python packages via pip..."
+            
+            # Method 1: User installation (preferred)
+            if pip3 install --user -r "$TEMP_REQUIREMENTS" 2>/dev/null; then
+                echo -e "${GREEN}✓${NC} Python packages installed (user)"
+            # Method 2: Break system packages (if user installation fails)
+            elif pip3 install --break-system-packages -r "$TEMP_REQUIREMENTS" 2>/dev/null; then
+                echo -e "${GREEN}✓${NC} Python packages installed (--break-system-packages)"
+            # Method 3: Virtual environment (safest)
+            elif [ ! -d "venv" ]; then
+                echo "Creating virtual environment..."
+                python3 -m venv venv
+                source venv/bin/activate
+                pip install -r "$TEMP_REQUIREMENTS"
+                echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+                echo -e "${YELLOW}⚠${NC} Remember to activate: source venv/bin/activate"
+            else
+                echo -e "${YELLOW}⚠${NC} Virtual environment exists, activating..."
+                source venv/bin/activate
+                pip install -r "$TEMP_REQUIREMENTS"
+                echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+            fi
+            print_status "Python dependencies installed"
+        else
+            echo -e "${YELLOW}⚠${NC} pip3 not found. Installing..."
+            sudo apt update
+            sudo apt install -y python3-pip python3-venv
+            
+            # Create virtual environment
+            if [ ! -d "venv" ]; then
+                python3 -m venv venv
+            fi
             source venv/bin/activate
-            pip install -r requirements.txt
+            pip install -r "$TEMP_REQUIREMENTS"
             echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
             echo -e "${YELLOW}⚠${NC} Remember to activate: source venv/bin/activate"
-        else
-            echo -e "${YELLOW}⚠${NC} Virtual environment exists, activating..."
-            source venv/bin/activate
-            pip install -r requirements.txt
-            echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+            print_status "Python dependencies installed"
         fi
-        print_status "Python dependencies installed"
-    else
-        echo -e "${YELLOW}⚠${NC} pip3 not found. Installing..."
-        sudo apt update
-        sudo apt install -y python3-pip python3-venv
         
-        # Create virtual environment
-        if [ ! -d "venv" ]; then
-            python3 -m venv venv
-        fi
-        source venv/bin/activate
-        pip install -r requirements.txt
-        echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
-        echo -e "${YELLOW}⚠${NC} Remember to activate: source venv/bin/activate"
-        print_status "Python dependencies installed"
+        rm -f "$TEMP_REQUIREMENTS"
+    fi
+    
+    # Note about ROS2 packages
+    if grep -q -E "^(rclpy|std_msgs|rosbridge_suite)" requirements.txt 2>/dev/null; then
+        echo ""
+        echo -e "${YELLOW}ℹ${NC} Note: ROS2 packages (rclpy, std_msgs, rosbridge_suite) are installed automatically"
+        echo "  when you install ROS2. They are not available via pip."
+        echo "  See requirements-ros2.txt for reference."
     fi
 fi
 

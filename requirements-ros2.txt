@@ -1,0 +1,8 @@
+# ROS2 packages - These are installed automatically with ROS2
+# Do NOT install via pip. Install ROS2 first, then these are available.
+# This file is for reference only.
+
+rclpy
+std_msgs
+rosbridge_suite
+
