@@ -12,33 +12,37 @@ package "Kubernetes Cluster" {
     rectangle "K8s Pod 1 - Publisher" {
         component [WASM Runtime\nWasmtime/Wasmer] as RT1 #667eea
         
-        package "microROS Stack (in WASM)" {
-            component [microROS Core] as CORE1 #4CAF50
-            component [ROS2 DDS Layer] as DDS1 #FFC107
-            component [Publisher Node] as PUB #9C27B0
+        package "ROS Executes HERE (in WASM)" {
+            component [microROS Core\n(executing in WASM)] as CORE1 #4CAF50
+            component [ROS2 DDS Layer\n(executing in WASM)] as DDS1 #FFC107
+            component [Publisher Node\n(executing in WASM)] as PUB #9C27B0
             component [WASI Interface] as WASI1 #FF9800
         }
         
-        RT1 --> CORE1
-        CORE1 --> DDS1
-        CORE1 --> PUB
-        DDS1 --> WASI1
+        RT1 --> CORE1 : executes ROS
+        RT1 --> DDS1 : executes ROS
+        RT1 --> PUB : executes ROS
+        CORE1 --> DDS1 : uses
+        CORE1 --> PUB : manages
+        DDS1 --> WASI1 : network I/O
     }
     
     rectangle "K8s Pod 2 - Subscriber" {
         component [WASM Runtime\nWasmtime/Wasmer] as RT2 #667eea
         
-        package "microROS Stack (in WASM)" {
-            component [microROS Core] as CORE2 #4CAF50
-            component [ROS2 DDS Layer] as DDS2 #FFC107
-            component [Subscriber Node] as SUB #f5576c
+        package "ROS Executes HERE (in WASM)" {
+            component [microROS Core\n(executing in WASM)] as CORE2 #4CAF50
+            component [ROS2 DDS Layer\n(executing in WASM)] as DDS2 #FFC107
+            component [Subscriber Node\n(executing in WASM)] as SUB #f5576c
             component [WASI Interface] as WASI2 #FF9800
         }
         
-        RT2 --> CORE2
-        CORE2 --> DDS2
-        CORE2 --> SUB
-        DDS2 --> WASI2
+        RT2 --> CORE2 : executes ROS
+        RT2 --> DDS2 : executes ROS
+        RT2 --> SUB : executes ROS
+        CORE2 --> DDS2 : uses
+        CORE2 --> SUB : manages
+        DDS2 --> WASI2 : network I/O
     }
     
     cloud "ROS2 DDS Network" {
@@ -71,13 +75,14 @@ package "Kubernetes Orchestration" {
 }
 
 note right of RT1
-  **Complete microROS stack**
-  **runs inside WASM:**
+  **ROS EXECUTES INSIDE WASM RUNTIME**
   
-  • No external bridge
-  • Direct ROS2 DDS
-  • Full isolation
-  • Portable & secure
+  • microROS core: compiled to WASM
+  • ROS2 DDS: runs in WASM
+  • All ROS operations: in WASM
+  • No ROS outside WASM
+  • Direct WASM-to-WASM communication
+  • Full isolation & portability
 end note
 
 note right of K8S
@@ -91,4 +96,3 @@ note right of K8S
 end note
 
 @enduml
-
