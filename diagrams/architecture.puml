@@ -1,0 +1,39 @@
+@startuml WASM-ROS Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+title WASM-ROS Communication Architecture
+
+package "Browser Environment" {
+    component [WASM Publisher\nEnvironment 1\nTemp Sensor] as Publisher #667eea
+    component [WASM Subscriber\nEnvironment 2\nActuator] as Subscriber #f5576c
+}
+
+component [ROS Bridge\nWebSocket\nPort 9090] as Bridge #4CAF50
+component [ROS2 Topic\n/sensor/temperature] as Topic #FFC107
+
+node "Browser Tab 1" as Tab1
+node "Browser Tab 2" as Tab2
+
+Publisher --> Bridge : WebSocket
+Bridge --> Topic : ROS2 DDS
+Topic --> Bridge : ROS2 DDS
+Bridge --> Subscriber : WebSocket
+
+Publisher ..> Tab1 : runs in
+Subscriber ..> Tab2 : runs in
+
+note right of Publisher
+  Generates temperature data
+  Publishes to ROS topic
+end note
+
+note right of Subscriber
+  Receives temperature data
+  Processes in WASM
+  Triggers actions
+end note
+
+@enduml
+

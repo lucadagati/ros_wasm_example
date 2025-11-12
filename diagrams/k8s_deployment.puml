@@ -1,0 +1,35 @@
+@startuml K8s Deployment
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+title Kubernetes Deployment Architecture
+
+package "Kubernetes Cluster" {
+    node "K8s Pod 1" {
+        component [WASM Runtime] as WASM1 #667eea
+        component [microROS\nNode A] as NODE1 #4CAF50
+        WASM1 --> NODE1 : hosts
+    }
+    
+    node "K8s Pod 2" {
+        component [WASM Runtime] as WASM2 #667eea
+        component [microROS\nNode B] as NODE2 #4CAF50
+        WASM2 --> NODE2 : hosts
+    }
+    
+    NODE1 <--> NODE2 : ROS Topics\n/Services
+}
+
+cloud "Kubernetes Orchestration" {
+    note right
+        K8s manages:
+        • Deployment & Scaling
+        • Health Checks
+        • Updates & Recovery
+        • Service Discovery
+    end note
+}
+
+@enduml
+

@@ -1,0 +1,47 @@
+@startuml Class Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam classAttributeIconSize 0
+
+title WASM Module Class Diagram
+
+class PublisherNode {
+    -int message_count
+    -double sensor_value
+    --
+    +PublisherNode()
+    +generateMessage() : string
+    +getMessageCount() : int
+    +getSensorValue() : double
+    +reset() : void
+}
+
+class SubscriberNode {
+    -int messages_received
+    -vector<double> received_values
+    -double last_value
+    -string last_message
+    --
+    +SubscriberNode()
+    +processMessage(message : string) : void
+    +getMessagesReceived() : int
+    +getLastValue() : double
+    +getAverageValue() : double
+    +reset() : void
+}
+
+note right of PublisherNode
+    WASM Module
+    Generates sensor data
+    Publishes to ROS topic
+end note
+
+note right of SubscriberNode
+    WASM Module
+    Receives ROS messages
+    Processes data
+    Calculates statistics
+end note
+
+@enduml
+

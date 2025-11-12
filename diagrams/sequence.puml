@@ -1,0 +1,44 @@
+@startuml Communication Sequence
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+
+title Communication Sequence Diagram
+
+participant "Publisher WASM" as P #667eea
+participant "JavaScript\n(Publisher)" as JS1 #4CAF50
+participant "ROS Bridge" as RB #FFC107
+participant "ROS2 Topics" as ROS #9C27B0
+participant "JavaScript\n(Subscriber)" as JS2 #4CAF50
+participant "Subscriber WASM" as S #f5576c
+
+loop Every second
+    P -> JS1: generateMessage()
+    activate JS1
+    JS1 -> RB: publish(topic, message)
+    activate RB
+    RB -> ROS: ROS2 DDS publish
+    activate ROS
+    ROS -> RB: message delivery
+    deactivate ROS
+    RB -> JS2: message callback
+    deactivate RB
+    activate JS2
+    JS2 -> S: processMessage(data)
+    activate S
+    S -> JS2: return statistics
+    deactivate S
+    JS2 -> JS2: update UI
+    deactivate JS2
+    deactivate JS1
+end
+
+note over P, S
+  Latency: ~5-30ms (local network)
+  Throughput: 1 msg/sec (configurable)
+end note
+
+@enduml
+
