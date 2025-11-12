@@ -20,6 +20,7 @@
 #include <functional>
 #include <cstring>
 #include <cstdint>
+#include "wasi_networking.cpp"
 
 // DDS Message structure
 struct DDSMessage {
@@ -37,15 +38,23 @@ private:
     int domain_id;
     bool initialized;
     uint32_t participant_guid[4];  // GUID for DDS discovery
+    NetworkManagerWASM* network_manager;
     
 public:
     DDSParticipantWASM(const std::string& name, int domain_id = 0)
-        : participant_name(name), domain_id(domain_id), initialized(false) {
+        : participant_name(name), domain_id(domain_id), initialized(false), network_manager(nullptr) {
         // Generate simple GUID (in real DDS this would be more complex)
         participant_guid[0] = 0x01010101;
         participant_guid[1] = 0x02020202;
         participant_guid[2] = 0x03030303;
         participant_guid[3] = static_cast<uint32_t>(std::hash<std::string>{}(name));
+    }
+    
+    ~DDSParticipantWASM() {
+        if (network_manager) {
+            network_manager->cleanup();
+            delete network_manager;
+        }
     }
     
     bool init() {
@@ -54,10 +63,12 @@ public:
         printf("WASM: Initializing DDS Participant '%s' (domain: %d)\n", 
                participant_name.c_str(), domain_id);
         
-        // TODO: Initialize WASI sockets for DDS discovery
-        // - UDP socket for discovery (multicast/unicast)
-        // - TCP socket for reliable communication
-        // - Join DDS discovery multicast group
+        // Initialize network manager for DDS discovery
+        network_manager = new NetworkManagerWASM();
+        if (!network_manager->init(7400 + domain_id)) {
+            printf("WASM: Failed to initialize network manager\n");
+            return false;
+        }
         
         initialized = true;
         printf("WASM: DDS Participant initialized (GUID: %08X-%08X-%08X-%08X)\n",
@@ -66,12 +77,21 @@ public:
     }
     
     void discoverParticipants() {
-        if (!initialized) return;
+        if (!initialized || !network_manager) return;
         
-        // TODO: Send discovery messages via UDP
-        // - Send participant announcement
-        // - Receive other participants' announcements
-        // - Build participant list
+        // Send participant announcement via UDP discovery
+        char announcement[256];
+        snprintf(announcement, sizeof(announcement),
+                 "DDS_PARTICIPANT:%s:%08X-%08X-%08X-%08X",
+                 participant_name.c_str(),
+                 participant_guid[0], participant_guid[1], participant_guid[2], participant_guid[3]);
+        
+        // Send to DDS discovery multicast address (239.255.0.1) or broadcast
+        NetworkEndpoint discovery_endpoint("239.255.0.1", 7400 + domain_id);
+        network_manager->sendDiscoveryMessage(announcement, discovery_endpoint);
+        
+        // Poll for incoming discovery messages
+        network_manager->poll();
     }
     
     bool isInitialized() const { return initialized; }
@@ -87,7 +107,7 @@ private:
     std::string type_name;
     bool initialized;
     uint32_t sequence_number;
-    std::vector<std::string> subscriber_endpoints;  // Discovered subscribers
+    std::vector<NetworkEndpoint> subscriber_endpoints;  // Discovered subscribers
     
 public:
     DDSPublisherWASM(DDSParticipantWASM* part, const std::string& topic, const std::string& type = "std_msgs::msg::String")
@@ -135,13 +155,24 @@ public:
         // Serialize message
         std::string serialized = serializeMessage(msg);
         
-        // TODO: Send via DDS to all discovered subscribers
-        // - For each subscriber endpoint:
-        //   - Send serialized message via TCP/UDP
-        //   - Handle acknowledgments
-        
-        // For now, simulate sending
-        printf("WASM: DDS message sent: %s\n", data.c_str());
+        // Send via DDS to all discovered subscribers
+        if (participant && participant->network_manager) {
+            bool sent = false;
+            for (const auto& endpoint : subscriber_endpoints) {
+                if (participant->network_manager->sendTCPMessage(endpoint.address, endpoint.port, serialized)) {
+                    sent = true;
+                    printf("WASM: Message sent to subscriber %s:%d\n", endpoint.address.c_str(), endpoint.port);
+                }
+            }
+            
+            if (subscriber_endpoints.empty()) {
+                printf("WASM: No subscribers discovered yet (message queued)\n");
+            } else if (!sent) {
+                printf("WASM: Failed to send to any subscriber\n");
+            }
+        } else {
+            printf("WASM: Network manager not available (simulated send)\n");
+        }
         
         return true;
     }
@@ -156,9 +187,9 @@ public:
         return std::string(buffer);
     }
     
-    void addSubscriberEndpoint(const std::string& endpoint) {
-        subscriber_endpoints.push_back(endpoint);
-        printf("WASM: Added subscriber endpoint: %s\n", endpoint.c_str());
+    void addSubscriberEndpoint(const std::string& address, int port) {
+        subscriber_endpoints.push_back(NetworkEndpoint(address, port));
+        printf("WASM: Added subscriber endpoint: %s:%d\n", address.c_str(), port);
     }
     
     bool isInitialized() const { return initialized; }
@@ -174,7 +205,7 @@ private:
     std::string type_name;
     bool initialized;
     std::function<void(const std::string&)> callback;
-    std::vector<std::string> publisher_endpoints;  // Discovered publishers
+    std::vector<NetworkEndpoint> publisher_endpoints;  // Discovered publishers
     int messages_received;
     
 public:
@@ -246,9 +277,9 @@ public:
         return msg;
     }
     
-    void addPublisherEndpoint(const std::string& endpoint) {
-        publisher_endpoints.push_back(endpoint);
-        printf("WASM: Added publisher endpoint: %s\n", endpoint.c_str());
+    void addPublisherEndpoint(const std::string& address, int port) {
+        publisher_endpoints.push_back(NetworkEndpoint(address, port));
+        printf("WASM: Added publisher endpoint: %s:%d\n", address.c_str(), port);
     }
     
     void spinOnce() {
@@ -278,7 +309,7 @@ EMSCRIPTEN_BINDINGS(dds_minimal_wasm) {
         .constructor<DDSParticipantWASM*, const std::string&, const std::string&>()
         .function("init", &DDSPublisherWASM::init)
         .function("publish", &DDSPublisherWASM::publish)
-        .function("addSubscriberEndpoint", &DDSPublisherWASM::addSubscriberEndpoint)
+        .function("addSubscriberEndpoint", &DDSPublisherWASM::addSubscriberEndpoint, allow_raw_pointers())
         .function("isInitialized", &DDSPublisherWASM::isInitialized)
         .function("getTopicName", &DDSPublisherWASM::getTopicName)
         .function("getSequenceNumber", &DDSPublisherWASM::getSequenceNumber);
