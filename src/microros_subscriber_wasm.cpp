@@ -56,15 +56,8 @@ public:
     bool init() {
         printf("WASM: Initializing microROS subscriber node '%s'\n", node_name.c_str());
         
-        // Initialize rcl
-        rcl_ret_t ret = rcl_init(0, NULL, NULL, &support.context);
-        if (ret != RCL_RET_OK) {
-            printf("WASM: Failed to initialize rcl\n");
-            return false;
-        }
-        
-        // Initialize rclc support
-        ret = rclc_support_init(&support, 0, NULL, NULL);
+        // Initialize rclc support (this also initializes rcl)
+        rcl_ret_t ret = rclc_support_init(&support, 0, NULL, NULL);
         if (ret != RCL_RET_OK) {
             printf("WASM: Failed to initialize rclc support\n");
             return false;
