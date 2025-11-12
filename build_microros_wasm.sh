@@ -23,8 +23,8 @@ echo ""
 # Create output directory
 mkdir -p wasm_output
 
-# Build ROS Publisher node (includes DDS)
-echo "Building ROS Publisher node (WASM)..."
+# Build ROS Publisher node (includes DDS) - Minimal DDS version
+echo "Building ROS Publisher node (WASM) - Minimal DDS..."
 echo "----------------------------------------"
 emcc src/ros_publisher_wasm.cpp \
     -I. \
@@ -40,6 +40,23 @@ emcc src/ros_publisher_wasm.cpp \
     --bind \
     -o wasm_output/ros_publisher.js
 
+# Build microROS Publisher node (using microROS API)
+echo "Building microROS Publisher node (WASM)..."
+echo "----------------------------------------"
+emcc src/microros_publisher_wasm.cpp \
+    -I. \
+    -s WASM=1 \
+    -s MODULARIZE=1 \
+    -s EXPORT_NAME="createMicroROSPublisherModule" \
+    -s EXPORTED_FUNCTIONS='["_malloc","_free"]' \
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","addOnPostRun"]' \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s MAXIMUM_MEMORY=128MB \
+    -s ENVIRONMENT=web,worker \
+    -O2 \
+    --bind \
+    -o wasm_output/microros_publisher.js
+
 if [ -f wasm_output/ros_publisher.wasm ]; then
     SIZE=$(du -h wasm_output/ros_publisher.wasm | cut -f1)
     echo "✓ ROS Publisher node built: wasm_output/ros_publisher.js"
@@ -50,8 +67,8 @@ else
 fi
 echo ""
 
-# Build ROS Subscriber node (includes DDS)
-echo "Building ROS Subscriber node (WASM)..."
+# Build ROS Subscriber node (includes DDS) - Minimal DDS version
+echo "Building ROS Subscriber node (WASM) - Minimal DDS..."
 echo "----------------------------------------"
 emcc src/ros_subscriber_wasm.cpp \
     -I. \
@@ -66,6 +83,23 @@ emcc src/ros_subscriber_wasm.cpp \
     -O2 \
     --bind \
     -o wasm_output/ros_subscriber.js
+
+# Build microROS Subscriber node (using microROS API)
+echo "Building microROS Subscriber node (WASM)..."
+echo "----------------------------------------"
+emcc src/microros_subscriber_wasm.cpp \
+    -I. \
+    -s WASM=1 \
+    -s MODULARIZE=1 \
+    -s EXPORT_NAME="createMicroROSSubscriberModule" \
+    -s EXPORTED_FUNCTIONS='["_malloc","_free"]' \
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","addOnPostRun"]' \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s MAXIMUM_MEMORY=128MB \
+    -s ENVIRONMENT=web,worker \
+    -O2 \
+    --bind \
+    -o wasm_output/microros_subscriber.js
 
 if [ -f wasm_output/ros_subscriber.wasm ]; then
     SIZE=$(du -h wasm_output/ros_subscriber.wasm | cut -f1)
@@ -82,12 +116,17 @@ echo "Build complete!"
 echo "=========================================="
 echo ""
 echo "WASM modules:"
-echo "  • Publisher:  wasm_output/ros_publisher.{js,wasm}"
-echo "  • Subscriber: wasm_output/ros_subscriber.{js,wasm}"
+echo "  • Minimal DDS Publisher:  wasm_output/ros_publisher.{js,wasm}"
+echo "  • Minimal DDS Subscriber: wasm_output/ros_subscriber.{js,wasm}"
+echo "  • microROS Publisher:     wasm_output/microros_publisher.{js,wasm}"
+echo "  • microROS Subscriber:     wasm_output/microros_subscriber.{js,wasm}"
+echo ""
+echo "Note: microROS modules use microROS API (rcl/rclc) but need full porting"
+echo "      Currently using placeholder implementations"
 echo ""
 echo "Next steps:"
-echo "  1. Test publisher: node test_publisher.js"
-echo "  2. Test subscriber: node test_subscriber.js"
-echo "  3. Test communication: node test_communication.js"
+echo "  1. Complete microROS porting (rcl/rclc)"
+echo "  2. Integrate with our DDS layer"
+echo "  3. Test microROS nodes"
 echo ""
 
