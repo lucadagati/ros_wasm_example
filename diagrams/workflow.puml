@@ -1,0 +1,73 @@
+@startuml Workflow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam activityStyle round
+skinparam roundcorner 10
+
+title microROS in WASM - Complete Workflow\nROS executing inside WASM Runtime
+
+start
+
+:Initialize K8s Cluster;
+note right
+  Deploy WASM runtime
+  (Wasmtime/Wasmer)
+end note
+
+:Deploy Pod 1\n(WASM Runtime);
+:Load microROS Core\n(compiled to WASM);
+:Initialize ROS2 DDS\n(compiled to WASM);
+note right
+  ROS code executes
+  inside WASM runtime
+end note
+
+:Deploy Pod 2\n(WASM Runtime);
+:Load microROS Core\n(compiled to WASM);
+:Initialize ROS2 DDS\n(compiled to WASM);
+note right
+  ROS code executes
+  inside WASM runtime
+end note
+
+:ROS2 DDS Discovery;
+note right
+  Nodes discover each other
+  via DDS multicast
+  (from WASM)
+end note
+
+partition "Publisher Workflow (in WASM)" {
+  :Publisher WASM\ngenerates data;
+  :microROS processes\n(ROS code in WASM);
+  :ROS2 DDS publish\n(ROS code in WASM);
+  :Message sent to\nROS2 Topic;
+}
+
+partition "Subscriber Workflow (in WASM)" {
+  :ROS2 DDS receives\nmessage in WASM;
+  :microROS processes\n(ROS code in WASM);
+  :Subscriber callback\nexecutes in WASM;
+  :Update statistics\n(ROS code in WASM);
+}
+
+:Message delivered\nvia ROS2 DDS\n(WASM to WASM);
+
+repeat
+  :Publish/Subscribe loop;
+  :Every second;
+  note right
+    All ROS operations
+    execute in WASM
+  end note
+repeat while (System running?) is (Yes)
+-> No;
+
+:K8s monitors health;
+:K8s scales if needed;
+:K8s updates if needed;
+
+stop
+
+@enduml
+

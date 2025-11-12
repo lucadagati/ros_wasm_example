@@ -1,0 +1,60 @@
+@startuml Component Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 10
+
+title System Component Diagram\nROS executing in WASM Runtime
+
+package "WASM Runtime Environment" {
+    component [WASM Runtime\n(Wasmtime/Wasmer)] as RUNTIME #667eea
+    
+    package "ROS Executes HERE (compiled to WASM)" {
+        component [microROS Core\n(WASM bytecode)] as CORE #4CAF50
+        component [ROS2 DDS Layer\n(WASM bytecode)] as DDS #FFC107
+        component [WASI Interface] as WASI #9C27B0
+        component [Node Logic\n(WASM bytecode)] as NODE #f5576c
+        
+        CORE --> DDS : uses
+        CORE --> WASI : system calls
+        CORE --> NODE : manages
+        DDS --> WASI : network I/O
+    }
+    
+    RUNTIME --> CORE : executes ROS code
+    RUNTIME --> DDS : executes ROS code
+    RUNTIME --> NODE : executes ROS code
+}
+
+package "Kubernetes Layer" {
+    component [K8s Pod] as POD
+    component [Container Runtime] as CONTAINER
+    component [Service Mesh] as MESH
+    
+    POD --> CONTAINER : contains
+    CONTAINER --> RUNTIME : runs
+    MESH --> POD : manages
+}
+
+package "ROS2 Network" {
+    component [DDS Discovery] as DISCOVERY
+    component [ROS Topics] as TOPICS
+    component [ROS Services] as SERVICES
+    
+    DDS --> DISCOVERY : participates
+    DDS --> TOPICS : publishes/subscribes
+    DDS --> SERVICES : provides/consumes
+}
+
+note right of CORE
+  **ROS EXECUTES INSIDE WASM RUNTIME**
+  
+  • microROS: compiled to WASM
+  • ROS2 DDS: compiled to WASM
+  • All ROS code: WASM bytecode
+  • Executed by WASM runtime
+  • No external ROS process
+  • Direct WASM-to-WASM communication
+end note
+
+@enduml
+

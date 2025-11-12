@@ -1,0 +1,62 @@
+@startuml WASM-ROS Architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+skinparam roundcorner 10
+skinparam shadowing false
+
+title WASM-ROS Communication Architecture\nROS executing inside WebAssembly Runtime
+
+package "Kubernetes Cluster" {
+    node "K8s Pod 1" {
+        component [WASM Runtime] as WASM1 #667eea
+        component [microROS\nPublisher Node\n(executing in WASM)] as PUB #4CAF50
+        component [ROS2 DDS\nTransport\n(executing in WASM)] as DDS1 #FFC107
+        WASM1 --> PUB : executes ROS
+        WASM1 --> DDS1 : executes ROS
+        PUB --> DDS1 : uses
+    }
+    
+    node "K8s Pod 2" {
+        component [WASM Runtime] as WASM2 #667eea
+        component [microROS\nSubscriber Node\n(executing in WASM)] as SUB #f5576c
+        component [ROS2 DDS\nTransport\n(executing in WASM)] as DDS2 #FFC107
+        WASM2 --> SUB : executes ROS
+        WASM2 --> DDS2 : executes ROS
+        SUB --> DDS2 : uses
+    }
+    
+    cloud "ROS2 DDS Network" as ROSNET #9C27B0 {
+        component [/sensor/temperature\nTopic] as TOPIC
+    }
+    
+    DDS1 <--> ROSNET : ROS2 DDS
+    ROSNET <--> DDS2 : ROS2 DDS
+    PUB --> TOPIC : publishes
+    TOPIC --> SUB : subscribes
+}
+
+note right of WASM1
+  **ROS EXECUTES INSIDE WASM**
+  
+  • microROS core: WASM bytecode
+  • ROS2 DDS: WASM bytecode
+  • Publisher logic: WASM bytecode
+  • All ROS code: compiled to WASM
+  • Executed by WASM runtime
+  • No external ROS process
+end note
+
+note right of WASM2
+  **ROS EXECUTES INSIDE WASM**
+  
+  • microROS core: WASM bytecode
+  • ROS2 DDS: WASM bytecode
+  • Subscriber logic: WASM bytecode
+  • All ROS code: compiled to WASM
+  • Executed by WASM runtime
+  • No external ROS process
+end note
+
+@enduml
+

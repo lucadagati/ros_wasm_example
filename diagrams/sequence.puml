@@ -1,0 +1,66 @@
+@startuml Communication Sequence
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+skinparam ParticipantPadding 20
+
+title Communication Sequence Diagram\nROS executing in WASM Runtime
+
+participant "Publisher WASM\n(ROS in WASM)" as P #667eea
+participant "ROS2 DDS\n(executing in WASM)" as DDS #FFC107
+participant "ROS2 Topic\nNetwork" as TOPIC #9C27B0
+participant "ROS2 DDS\n(executing in WASM)" as DDS2 #FFC107
+participant "Subscriber WASM\n(ROS in WASM)" as S #f5576c
+
+== Initialization ==
+P -> P: Initialize microROS\n(in WASM)
+activate P
+P -> DDS: Setup DDS transport\n(in WASM)
+activate DDS
+DDS -> TOPIC: Register publisher\n(from WASM)
+activate TOPIC
+deactivate TOPIC
+deactivate DDS
+
+S -> S: Initialize microROS\n(in WASM)
+activate S
+S -> DDS2: Setup DDS transport\n(in WASM)
+activate DDS2
+DDS2 -> TOPIC: Register subscriber\n(from WASM)
+activate TOPIC
+deactivate TOPIC
+deactivate DDS2
+
+== Message Publishing Loop ==
+loop Every second
+    P -> P: generateMessage()\n(ROS code in WASM)
+    P -> DDS: publish(topic, message)\n(ROS code in WASM)
+    activate DDS
+    DDS -> TOPIC: ROS2 DDS publish\n(from WASM)
+    activate TOPIC
+    TOPIC -> DDS2: message delivery\n(to WASM)
+    deactivate TOPIC
+    activate DDS2
+    DDS2 -> S: processMessage(data)\n(ROS code in WASM)
+    deactivate DDS2
+    S -> S: update statistics\n(ROS code in WASM)
+    deactivate DDS
+end
+
+note over P, S
+  **All ROS operations**
+  **execute inside WASM runtime**
+  
+  • ROS code: WASM bytecode
+  • Executed by WASM runtime
+  • No external ROS process
+  • Direct WASM-to-WASM communication
+  
+  Latency: ~5-30ms
+  Throughput: configurable
+end note
+
+@enduml
+
