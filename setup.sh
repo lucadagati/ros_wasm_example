@@ -215,47 +215,79 @@ echo ""
 echo "Step 4: ROS2 Installation (Optional)..."
 echo "----------------------------------------"
 
-read -p "Do you want to install ROS2 Humble? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if [ -f "/opt/ros/humble/setup.bash" ]; then
-        echo -e "${GREEN}✓${NC} ROS2 Humble already installed"
-    else
-        echo "Installing ROS2 Humble..."
-        echo "  This will take several minutes..."
-        
-        # Check Ubuntu version
-        UBUNTU_VERSION=$(lsb_release -rs)
-        if [ "$(echo "$UBUNTU_VERSION >= 22.04" | bc)" -eq 1 ]; then
-            sudo apt update
-            sudo apt install -y software-properties-common
-            sudo add-apt-repository universe
-            sudo apt update && sudo apt install -y curl gnupg lsb-release
-            
-            sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(source /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2-latest.list > /dev/null
-            
-            sudo apt update
-            sudo apt install -y ros-humble-desktop ros-humble-rosbridge-suite
-            
-            # Setup ROS2 environment
-            if [ -f "$HOME/.bashrc" ]; then
-                if ! grep -q "ros-humble/setup.bash" "$HOME/.bashrc"; then
-                    echo "" >> "$HOME/.bashrc"
-                    echo "# ROS2 Humble" >> "$HOME/.bashrc"
-                    echo "source /opt/ros/humble/setup.bash" >> "$HOME/.bashrc"
-                fi
-            fi
-            
-            print_status "ROS2 Humble installed"
-        else
-            echo -e "${RED}✗${NC} ROS2 Humble requires Ubuntu 22.04 or later"
-            echo "  Current version: Ubuntu $UBUNTU_VERSION"
-        fi
-    fi
+# Detect Ubuntu version and corresponding ROS2 version
+if command_exists lsb_release; then
+    UBUNTU_VERSION=$(lsb_release -rs)
+    UBUNTU_CODENAME=$(lsb_release -cs)
+    
+    # Map Ubuntu versions to ROS2 versions
+    case "$UBUNTU_CODENAME" in
+        jammy)
+            ROS2_VERSION="humble"
+            ROS2_FULL_NAME="ROS2 Humble"
+            ;;
+        noble)
+            ROS2_VERSION="jazzy"
+            ROS2_FULL_NAME="ROS2 Jazzy"
+            ;;
+        *)
+            echo -e "${YELLOW}⚠${NC} Ubuntu $UBUNTU_CODENAME detected"
+            echo "  ROS2 installation may not be supported for this version"
+            ROS2_VERSION=""
+            ;;
+    esac
 else
-    echo -e "${YELLOW}⚠${NC} ROS2 installation skipped"
-    echo "  You can install it later if needed for testing"
+    echo -e "${YELLOW}⚠${NC} Cannot detect Ubuntu version"
+    ROS2_VERSION=""
+fi
+
+if [ -z "$ROS2_VERSION" ]; then
+    echo -e "${YELLOW}⚠${NC} ROS2 installation skipped (unsupported Ubuntu version)"
+    echo "  You can install ROS2 manually if needed"
+else
+    read -p "Do you want to install $ROS2_FULL_NAME? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ -f "/opt/ros/$ROS2_VERSION/setup.bash" ]; then
+            echo -e "${GREEN}✓${NC} $ROS2_FULL_NAME already installed"
+        else
+            echo "Installing $ROS2_FULL_NAME..."
+            echo "  This will take several minutes..."
+            
+            # Install prerequisites
+            sudo apt update
+            sudo apt install -y software-properties-common curl gnupg lsb-release
+            
+            # Add ROS2 repository
+            sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $UBUNTU_CODENAME main" | sudo tee /etc/apt/sources.list.d/ros2-latest.list > /dev/null
+            
+            # Update package list
+            sudo apt update
+            
+            # Install ROS2
+            if sudo apt install -y ros-${ROS2_VERSION}-desktop ros-${ROS2_VERSION}-rosbridge-suite 2>/dev/null; then
+                # Setup ROS2 environment
+                if [ -f "$HOME/.bashrc" ]; then
+                    if ! grep -q "ros-${ROS2_VERSION}/setup.bash" "$HOME/.bashrc"; then
+                        echo "" >> "$HOME/.bashrc"
+                        echo "# $ROS2_FULL_NAME" >> "$HOME/.bashrc"
+                        echo "source /opt/ros/${ROS2_VERSION}/setup.bash" >> "$HOME/.bashrc"
+                    fi
+                fi
+                
+                print_status "$ROS2_FULL_NAME installed"
+                echo -e "${GREEN}✓${NC} ROS2 packages (rclpy, std_msgs, rosbridge_suite) are now available"
+            else
+                echo -e "${RED}✗${NC} Failed to install $ROS2_FULL_NAME"
+                echo "  You may need to check ROS2 compatibility with your Ubuntu version"
+                echo "  Or install ROS2 manually following: https://docs.ros.org/en/${ROS2_VERSION}/Installation.html"
+            fi
+        fi
+    else
+        echo -e "${YELLOW}⚠${NC} ROS2 installation skipped"
+        echo "  You can install it later if needed for testing"
+    fi
 fi
 
 echo ""
