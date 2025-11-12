@@ -129,20 +129,64 @@ echo ""
 echo "Step 3: Installing Python dependencies..."
 echo "----------------------------------------"
 
-if command_exists pip3; then
-    echo "Installing Python packages..."
-    pip3 install --user -r requirements.txt 2>/dev/null || \
-    pip3 install --break-system-packages -r requirements.txt 2>/dev/null || \
-    sudo pip3 install -r requirements.txt
-    print_status "Python dependencies installed"
+# Check if requirements.txt exists
+if [ ! -f "requirements.txt" ]; then
+    echo -e "${YELLOW}⚠${NC} requirements.txt not found, skipping Python dependencies"
 else
-    echo -e "${YELLOW}⚠${NC} pip3 not found. Installing..."
-    sudo apt update
-    sudo apt install -y python3-pip
-    pip3 install --user -r requirements.txt 2>/dev/null || \
-    pip3 install --break-system-packages -r requirements.txt 2>/dev/null || \
-    sudo pip3 install -r requirements.txt
-    print_status "Python dependencies installed"
+    # Try to install using apt first (for system packages)
+    if command_exists apt; then
+        echo "Checking for system packages..."
+        if grep -q "python-pptx\|python3-pptx" requirements.txt 2>/dev/null; then
+            if apt list --installed 2>/dev/null | grep -q "python3-pptx"; then
+                echo -e "${GREEN}✓${NC} python3-pptx already installed"
+            else
+                echo "Installing python3-pptx via apt..."
+                sudo apt update
+                sudo apt install -y python3-pptx 2>/dev/null || echo -e "${YELLOW}⚠${NC} python3-pptx not available via apt"
+            fi
+        fi
+    fi
+    
+    # Try pip with different methods
+    if command_exists pip3; then
+        echo "Installing Python packages via pip..."
+        
+        # Method 1: User installation (preferred)
+        if pip3 install --user -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} Python packages installed (user)"
+        # Method 2: Break system packages (if user installation fails)
+        elif pip3 install --break-system-packages -r requirements.txt 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} Python packages installed (--break-system-packages)"
+        # Method 3: Virtual environment (safest)
+        elif [ ! -d "venv" ]; then
+            echo "Creating virtual environment..."
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+            echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+            echo -e "${YELLOW}⚠${NC} Remember to activate: source venv/bin/activate"
+        else
+            echo -e "${YELLOW}⚠${NC} Virtual environment exists, activating..."
+            source venv/bin/activate
+            pip install -r requirements.txt
+            echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+        fi
+        print_status "Python dependencies installed"
+    else
+        echo -e "${YELLOW}⚠${NC} pip3 not found. Installing..."
+        sudo apt update
+        sudo apt install -y python3-pip python3-venv
+        
+        # Create virtual environment
+        if [ ! -d "venv" ]; then
+            python3 -m venv venv
+        fi
+        source venv/bin/activate
+        pip install -r requirements.txt
+        echo -e "${GREEN}✓${NC} Python packages installed in virtual environment"
+        echo -e "${YELLOW}⚠${NC} Remember to activate: source venv/bin/activate"
+        print_status "Python dependencies installed"
+    fi
 fi
 
 echo ""
@@ -199,6 +243,10 @@ echo "----------------------------------------"
 if [ -f "build.sh" ]; then
     chmod +x build.sh
     echo "Running build script..."
+    # Make sure Emscripten is activated
+    if [ -d "$EMSDK_DIR" ]; then
+        source "$EMSDK_DIR/emsdk_env.sh" > /dev/null 2>&1
+    fi
     ./build.sh
     print_status "WASM modules built"
 else
@@ -214,13 +262,24 @@ echo "Next steps:"
 echo "1. Source Emscripten (if not in your shell profile):"
 echo "   source $EMSDK_DIR/emsdk_env.sh"
 echo ""
-echo "2. Build WASM modules:"
-echo "   ./build.sh"
+if [ -d "venv" ]; then
+    echo "2. Activate Python virtual environment:"
+    echo "   source venv/bin/activate"
+    echo ""
+    echo "3. Build WASM modules:"
+    echo "   ./build.sh"
+    echo ""
+    echo "4. Start the system:"
+    echo "   ./start_all.sh"
+else
+    echo "2. Build WASM modules:"
+    echo "   ./build.sh"
+    echo ""
+    echo "3. Start the system:"
+    echo "   ./start_all.sh"
+fi
 echo ""
-echo "3. Start the system:"
-echo "   ./start_all.sh"
-echo ""
-echo "4. Open in browser:"
+echo "5. Open in browser:"
 echo "   http://localhost:8000/publisher.html"
 echo "   http://localhost:8000/subscriber.html"
 echo ""
