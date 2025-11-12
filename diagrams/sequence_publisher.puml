@@ -1,4 +1,4 @@
-@startuml Publisher Sequence
+@startuml
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam sequenceArrowThickness 2
@@ -8,11 +8,9 @@ skinparam ParticipantPadding 20
 
 title Publisher WASM - Communication Sequence\nEnvironment 1: Temperature Sensor
 
-package "Publisher WASM Environment" {
-    participant "Browser Tab 1" as BROWSER #667eea
-    participant "PublisherNode\n(C++ WASM)" as WASM_NODE #4CAF50
-    participant "JavaScript\nGlue Code" as JS #9C27B0
-}
+participant "Browser Tab 1" as BROWSER #667eea
+participant "PublisherNode\n(C++ WASM)" as WASM_NODE #4CAF50
+participant "JavaScript\nGlue Code" as JS #9C27B0
 
 participant "ROS Bridge\n(WebSocket)" as RB #FFC107
 participant "ROS2 Topic\n/sensor/temperature" as ROS #f5576c

@@ -1,4 +1,4 @@
-@startuml Subscriber Sequence
+@startuml
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam sequenceArrowThickness 2
@@ -8,11 +8,9 @@ skinparam ParticipantPadding 20
 
 title Subscriber WASM - Communication Sequence\nEnvironment 2: Actuator/Controller
 
-package "Subscriber WASM Environment" {
-    participant "Browser Tab 2" as BROWSER #f5576c
-    participant "SubscriberNode\n(C++ WASM)" as WASM_NODE #4CAF50
-    participant "JavaScript\nGlue Code" as JS #9C27B0
-}
+participant "Browser Tab 2" as BROWSER #f5576c
+participant "SubscriberNode\n(C++ WASM)" as WASM_NODE #4CAF50
+participant "JavaScript\nGlue Code" as JS #9C27B0
 
 participant "ROS Bridge\n(WebSocket)" as RB #FFC107
 participant "ROS2 Topic\n/sensor/temperature" as ROS #667eea
