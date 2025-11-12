@@ -14,7 +14,7 @@ Questo progetto dimostra come due moduli WebAssembly indipendenti possano comuni
 ```mermaid
 graph LR
     A[WASM Publisher<br/>Ambiente 1<br/>Sensore Temp] -->|WebSocket| B[ROS Bridge<br/>Port 9090]
-    B -->|ROS2 Topic| C[/sensor/temperature]
+    B -->|ROS2 Topic| C[ROS Topic<br/>sensor-temperature]
     C -->|ROS2 Topic| B
     B -->|WebSocket| D[WASM Subscriber<br/>Ambiente 2<br/>Attuatore]
     
