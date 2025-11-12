@@ -46,11 +46,11 @@ loop Continuous
     JS -> WASM_NODE: processMessage(JSON string)
     activate WASM_NODE
     
-    WASM_NODE -> WASM_NODE: Parse JSON\nExtract \"value\" field
+    WASM_NODE -> WASM_NODE: Parse JSON\nExtract value field
     WASM_NODE -> WASM_NODE: messages_received++\nreceived_values.push(value)
     WASM_NODE -> WASM_NODE: Keep last 10 values\nRemove oldest if > 10
     WASM_NODE -> WASM_NODE: Calculate average\nfrom received_values
-    WASM_NODE -> WASM_NODE: Check alarm condition\nif value > 25°C
+    WASM_NODE -> WASM_NODE: Check alarm condition\nif value > 25 degrees C
     WASM_NODE --> JS: return statistics\n- messages_received\n- last_value\n- average_value
     deactivate WASM_NODE
     

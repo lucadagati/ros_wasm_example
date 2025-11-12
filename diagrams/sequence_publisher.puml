@@ -40,7 +40,7 @@ loop Every second
     BROWSER -> WASM_NODE: generateMessage()
     activate WASM_NODE
     WASM_NODE -> WASM_NODE: message_count++\nsensor_value = 20.0 + (count % 10)
-    WASM_NODE -> WASM_NODE: Format JSON message\n{\"id\": X, \"sensor\": \"temperature\",\n \"value\": Y, \"unit\": \"celsius\"}
+    WASM_NODE -> WASM_NODE: Format JSON message\nid: X, sensor: temperature,\nvalue: Y, unit: celsius
     WASM_NODE --> JS: return JSON string
     deactivate WASM_NODE
     
