@@ -14,6 +14,7 @@ This project demonstrates microROS running inside WebAssembly (WASM) runtime, wi
 **Current Implementation**: Prototype using ROS Bridge (for demonstration purposes)
 - WASM modules communicate via JavaScript and ROS Bridge
 - This serves as a proof-of-concept while microROS is being ported to WASM
+- **⚠️ IMPORTANT**: ROS does NOT currently run inside WASM. See `IMPLEMENTATION_PLAN.md` and `ROADMAP.md` for the plan to achieve this.
 
 ## Target Architecture (microROS in WASM)
 

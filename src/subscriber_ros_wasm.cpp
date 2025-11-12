@@ -134,7 +134,7 @@ public:
 };
 
 EMSCRIPTEN_BINDINGS(ros_subscriber_wasm) {
-    class_<ROSPublisherWASM>("ROSSubscriberWASM")
+    class_<ROSSubscriberWASM>("ROSSubscriberWASM")
         .constructor<>()
         .function("initROS", &ROSSubscriberWASM::initROS)
         .function("messageCallback", &ROSSubscriberWASM::messageCallback)
