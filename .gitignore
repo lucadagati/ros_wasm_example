@@ -1,0 +1,42 @@
+# Build artifacts
+public/*.js
+public/*.wasm
+public/*.map
+*.wasm
+*.js.map
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# ROS
+build/
+install/
+log/
+.catkin_workspace
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Emscripten cache
+.emscripten_cache/
+.emscripten_ports/
+
+# Logs
+*.log
+

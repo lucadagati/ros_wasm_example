@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Subscriber - No WASM</title>
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #0b7dda; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .alert {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+            display: none;
+        }
+        .alert.show { display: block; }
+        #log {
+            background: #000;
+            color: #0ff;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Simple Subscriber (Pure JS)</h1>
+        <p>Versione semplificata senza WASM - solo JavaScript</p>
+        
+        <div id="alert" class="alert">🚨 ALLARME: Temperatura elevata!</div>
+        <div id="status" class="disconnected">Disconnesso</div>
+        
+        <button onclick="connect()">Connetti</button>
+        <button id="subBtn" onclick="subscribe()" disabled>Iscriviti</button>
+        
+        <div>Messaggi ricevuti: <span id="count">0</span></div>
+        <div>Ultimo valore: <span id="value">--</span></div>
+        <div>Media: <span id="avg">--</span></div>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let ros, subscriber, count = 0, values = [];
+
+        function connect() {
+            log('Connessione...');
+            ros = new ROSLIB.Ros({ url: 'ws://localhost:9090' });
+            
+            ros.on('connection', () => {
+                log('✅ Connesso!');
+                document.getElementById('status').className = 'connected';
+                document.getElementById('status').textContent = 'Connesso';
+                document.getElementById('subBtn').disabled = false;
+            });
+            
+            ros.on('error', (err) => log('❌ Errore: ' + err));
+            ros.on('close', () => {
+                log('Connessione chiusa');
+                document.getElementById('status').className = 'disconnected';
+                document.getElementById('status').textContent = 'Disconnesso';
+            });
+        }
+
+        function subscribe() {
+            document.getElementById('subBtn').disabled = true;
+            log('📡 Iscrizione al topic...');
+            
+            subscriber = new ROSLIB.Topic({
+                ros: ros,
+                name: '/sensor/temperature',
+                messageType: 'std_msgs/String'
+            });
+
+            subscriber.subscribe((message) => {
+                count++;
+                const data = JSON.parse(message.data);
+                const temp = parseFloat(data.value);
+                
+                values.push(temp);
+                if (values.length > 10) values.shift();
+                
+                const avg = values.reduce((a, b) => a + b, 0) / values.length;
+                
+                document.getElementById('count').textContent = count;
+                document.getElementById('value').textContent = temp.toFixed(1) + '°C';
+                document.getElementById('avg').textContent = avg.toFixed(1) + '°C';
+                
+                const alert = document.getElementById('alert');
+                if (temp > 25) {
+                    alert.classList.add('show');
+                    log(`🚨 #${count}: ${temp.toFixed(1)}°C - ALLARME!`);
+                } else {
+                    alert.classList.remove('show');
+                    log(`📥 #${count}: ${temp.toFixed(1)}°C`);
+                }
+            });
+            
+            log('✅ Iscritto al topic!');
+        }
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            document.getElementById('log').appendChild(div);
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+    </script>
+</body>
+</html>
+

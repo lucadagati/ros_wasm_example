@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Publisher - No WASM</title>
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 Simple Publisher (Pure JS)</h1>
+        <p>Versione semplificata senza WASM - solo JavaScript</p>
+        
+        <div id="status" class="disconnected">Disconnesso</div>
+        
+        <button onclick="connect()">Connetti</button>
+        <button id="startBtn" onclick="start()" disabled>Avvia</button>
+        <button id="stopBtn" onclick="stop()" disabled>Stop</button>
+        
+        <div>Messaggi: <span id="count">0</span></div>
+        <div>Valore: <span id="value">--</span></div>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let ros, publisher, interval, count = 0;
+
+        function connect() {
+            log('Connessione...');
+            ros = new ROSLIB.Ros({ url: 'ws://localhost:9090' });
+            
+            ros.on('connection', () => {
+                log('✅ Connesso!');
+                document.getElementById('status').className = 'connected';
+                document.getElementById('status').textContent = 'Connesso';
+                document.getElementById('startBtn').disabled = false;
+                
+                publisher = new ROSLIB.Topic({
+                    ros: ros,
+                    name: '/sensor/temperature',
+                    messageType: 'std_msgs/String'
+                });
+            });
+            
+            ros.on('error', (err) => log('❌ Errore: ' + err));
+            ros.on('close', () => {
+                log('Connessione chiusa');
+                document.getElementById('status').className = 'disconnected';
+                document.getElementById('status').textContent = 'Disconnesso';
+            });
+        }
+
+        function start() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            log('▶️ Avviato');
+            
+            interval = setInterval(() => {
+                count++;
+                const value = 20 + Math.random() * 10;
+                const msg = new ROSLIB.Message({
+                    data: JSON.stringify({
+                        id: count,
+                        sensor: 'temperature',
+                        value: value.toFixed(2),
+                        unit: 'celsius'
+                    })
+                });
+                
+                publisher.publish(msg);
+                document.getElementById('count').textContent = count;
+                document.getElementById('value').textContent = value.toFixed(1) + '°C';
+                log(`📤 #${count}: ${value.toFixed(1)}°C`);
+            }, 1000);
+        }
+
+        function stop() {
+            clearInterval(interval);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            log('⏸️ Fermato');
+        }
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            document.getElementById('log').appendChild(div);
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+    </script>
+</body>
+</html>
+

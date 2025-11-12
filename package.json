@@ -1,0 +1,18 @@
+{
+  "name": "wasm-ros-communication",
+  "version": "1.0.0",
+  "description": "Due ambienti WASM che comunicano tramite ROS",
+  "main": "index.js",
+  "scripts": {
+    "build": "emcc src/publisher_node.c -o public/publisher.js -s WASM=1 -s EXPORTED_FUNCTIONS='[\"_init_publisher\",\"_publish_message\",\"_main\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]' && emcc src/subscriber_node.c -o public/subscriber.js -s WASM=1 -s EXPORTED_FUNCTIONS='[\"_init_subscriber\",\"_main\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]'",
+    "serve": "python3 -m http.server 8000 --directory public",
+    "rosbridge": "ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
+  },
+  "keywords": ["wasm", "ros", "ros2", "webassembly"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "roslib": "^1.3.0"
+  }
+}
+

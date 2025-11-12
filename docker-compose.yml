@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  wasm-ros-env:
+    build: .
+    container_name: wasm-ros-communication
+    volumes:
+      - .:/workspace
+    ports:
+      - "8000:8000"  # Web server
+      - "9090:9090"  # ROS Bridge
+    stdin_open: true
+    tty: true
+    command: /bin/bash -c "source /opt/ros/humble/setup.bash && /workspace/build.sh && tail -f /dev/null"
+    networks:
+      - wasm-ros-net
+
+networks:
+  wasm-ros-net:
+    driver: bridge
+
