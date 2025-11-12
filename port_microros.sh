@@ -24,8 +24,37 @@ echo ""
 MICROROS_DIR="microros"
 if [ ! -d "$MICROROS_DIR" ]; then
     echo "Cloning microROS repository..."
-    git clone --recursive https://github.com/micro-ROS/micro-ROS.git "$MICROROS_DIR"
-    echo "✓ microROS cloned"
+    echo "Note: This may require authentication"
+    echo ""
+    echo "Option 1: Clone via HTTPS (requires credentials)"
+    echo "  git clone --recursive https://github.com/micro-ROS/micro-ROS.git $MICROROS_DIR"
+    echo ""
+    echo "Option 2: Clone via SSH"
+    echo "  git clone --recursive git@github.com:micro-ROS/micro-ROS.git $MICROROS_DIR"
+    echo ""
+    read -p "Attempt to clone now? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Try SSH first, then HTTPS
+        if git clone --recursive git@github.com:micro-ROS/micro-ROS.git "$MICROROS_DIR" 2>/dev/null; then
+            echo "✓ microROS cloned via SSH"
+        elif git clone --recursive https://github.com/micro-ROS/micro-ROS.git "$MICROROS_DIR" 2>/dev/null; then
+            echo "✓ microROS cloned via HTTPS"
+        else
+            echo "⚠ Failed to clone. Please clone manually:"
+            echo "  git clone --recursive https://github.com/micro-ROS/micro-ROS.git $MICROROS_DIR"
+            echo ""
+            echo "Creating placeholder structure..."
+            mkdir -p "$MICROROS_DIR"
+            echo "# microROS" > "$MICROROS_DIR/README.md"
+            echo "Clone microROS here: git clone --recursive https://github.com/micro-ROS/micro-ROS.git" >> "$MICROROS_DIR/README.md"
+        fi
+    else
+        echo "Skipping clone. Create $MICROROS_DIR/ manually when ready."
+        mkdir -p "$MICROROS_DIR"
+        echo "# microROS" > "$MICROROS_DIR/README.md"
+        echo "Clone microROS here: git clone --recursive https://github.com/micro-ROS/micro-ROS.git" >> "$MICROROS_DIR/README.md"
+    fi
 else
     echo "✓ microROS directory exists"
 fi
